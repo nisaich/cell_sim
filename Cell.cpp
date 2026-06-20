@@ -12,6 +12,17 @@ int abstract_Cell::get_age() const {
     return age_of_cell;
 }
 
+void abstract_Cell::copy_common_state_to(abstract_Cell& other) const {
+    other.age_of_cell = age_of_cell;
+    other.max_food_inside = max_food_inside;
+    other.max_amount_of_food_consumed = max_amount_of_food_consumed;
+    other.using_food_for_step = using_food_for_step;
+
+    other.max_age_of_cell = max_age_of_cell;
+    other.food_inside = food_inside;
+    other.level_of_resistance = level_of_resistance;
+}
+
 float abstract_Cell::get_level_of_resistance() const {
     return level_of_resistance;
 }
@@ -73,6 +84,17 @@ bool active_Cell::reproduction(Field& current_field, int x, int y) {
     std::vector<Nucleus*> free_neighbours = current_field.get_free_neighbours(x, y);
 
     if (free_neighbours.empty()) {
+      auto nonactive_cell = std::make_shared<nonactive_Cell>(
+            food_inside,
+            level_of_resistance,
+            max_age_of_cell,
+            max_food_inside,
+            max_amount_of_food_consumed,
+            using_food_for_step
+        );
+
+        current_field.get_nucleus(x, y).set_cell(nonactive_cell);
+
         return false;
     }
 
@@ -112,8 +134,37 @@ bool active_Cell::reproduction(Field& current_field, int x, int y) {
     return true;
 }
 
-bool nonactive_Cell::is_alive() const {
-    return true;
+nonactive_Cell::nonactive_Cell(
+    int start_food,
+    float resistance,
+    int max_age,
+    int max_food,
+    int max_food_consumed,
+    int food_usage
+) {
+    food_inside = start_food;
+    level_of_resistance = resistance;
+    max_age_of_cell = max_age;
+
+    max_food_inside = max_food;
+    max_amount_of_food_consumed = max_food_consumed;
+    using_food_for_step = food_usage;
+}
+
+bool nonactive_Cell::reproduction(Field& current_field, int x, int y) {
+    const int activation_food_threshold = 10;
+    std::vector<Nucleus*> free_neighbours = current_field.get_free_neighbours(x, y);
+
+    if (food_inside <= activation_food_threshold || free_neighbours.empty()) {
+        return false;
+    }
+
+    auto active_cell = std::make_shared<active_Cell>();
+    copy_common_state_to(*active_cell);
+
+    current_field.get_nucleus(x, y).set_cell(active_cell);
+
+    return active_cell->reproduction(current_field, x, y);
 }
 
 void dead_Cell::step_after_death() {
@@ -131,4 +182,3 @@ bool dead_Cell::is_it_still_there() const {
 bool dead_Cell::is_alive() const {
     return false;
 }
-

@@ -17,19 +17,19 @@ void visualize_field(const Field& current_field) {
             std::shared_ptr<abstract_Cell> cell =
                 current_field.get_nucleus(x, y).get_cell();
 
-            if (cell == nullptr) {
-                //std::cout << '.';
-                std::cout << "\033[33m.\033[0m";
-            } else if (cell->is_alive()) {
-                //std::cout << 'O';
-                std::cout << "\033[32m0\033[0m";
-
-            } else {
-                //std::cout << 'x';
-                std::cout << "\033[31mX\033[0m";
-
-            }
+        if (cell == nullptr) {
+          std::cout << "\033[36m.\033[0m";
+        } 
+        else if (std::dynamic_pointer_cast<active_Cell>(cell) != nullptr) {
+          std::cout << "\033[32mA\033[0m";
+        } 
+        else if (std::dynamic_pointer_cast<nonactive_Cell>(cell) != nullptr) {
+          std::cout << "\033[33mN\033[0m";
         }
+        else if (std::dynamic_pointer_cast<dead_Cell>(cell) != nullptr) {
+          std::cout << "\033[31mD\033[0m";
+        }
+      }
 
         std::cout << '\n';
     }
@@ -37,6 +37,6 @@ void visualize_field(const Field& current_field) {
     std::cout << std::flush;
 
     // Задержка между кадрами.
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
 
 }

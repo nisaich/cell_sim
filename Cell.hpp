@@ -12,6 +12,8 @@ protected:
     int max_amount_of_food_consumed = 2;
     float using_food_for_step = 1;
 
+    void copy_common_state_to(abstract_Cell& other) const;
+
 public:
     int max_age_of_cell = 90;
     int food_inside = 5;
@@ -40,7 +42,7 @@ public:
 class active_Cell : public abstract_Cell {
 public:
     active_Cell() = default;
-    active_Cell(int start_food, float resistance = 0.0f, int max_age = 30);
+    active_Cell(int start_food, float resistance = 0.0f, int max_age = 90);
 
     bool is_alive() const override;
     bool reproduction(Field& current_field, int x, int y) override;
@@ -49,16 +51,31 @@ public:
 class nonactive_Cell : public abstract_Cell {
 private:  
 //неактивные клетки потребляют меньшее кол-во питания и имеют повышенный резист к антибиотику
-    float resistance_multiplier = 1.0f;
-    float food_usage_multiplier = 1.0f;
+    float resistance_multiplier = 2.0f;
+    float food_usage_multiplier = 0.2f;
 
 public:
-    bool is_alive() const override;
+    nonactive_Cell()=default;
+
+    nonactive_Cell(
+        int start_food,
+        float resistance,
+        int max_age,
+        int max_food,
+        int max_food_consumed,
+        int food_usage
+    );
+
+    bool is_alive() const override {
+      return true;
+    }
+
+    bool reproduction(Field& current_field, int x, int y) override;
 };
 
 class dead_Cell : public abstract_Cell {
 private:
-    int count_of_steps_to_disappearance = 5;
+    int count_of_steps_to_disappearance = 300;
 
 public:
     int count_of_steps_from_death = 0;

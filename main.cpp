@@ -14,7 +14,7 @@ int main() {
 
     //начальные клетки
     int y=0;
-    for (int x = 0; x < 1; ++x) {
+    for (int x = width/2; x < width/2+1; ++x) {
         simulation_field.place_cell(
             x,
             height-1,

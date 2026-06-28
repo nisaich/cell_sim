@@ -1,4 +1,4 @@
-#include "Cell.hpp"
+#include "Biomass.hpp"
 #include "Field.hpp"
 #include "visualization.hpp"
 
@@ -7,8 +7,8 @@
 int main() {
   //задаём начальные параметры:
     //размер поля:
-    const int width = 800;
-    const int height = 600;
+    const int width = 80;
+    const int height = 60;
 
     Field simulation_field(width, height);
 
@@ -18,7 +18,7 @@ int main() {
         simulation_field.place_cell(
             x,
             height-1,
-            std::make_shared<active_Cell>()
+            std::make_shared<active_Biomass>()
         );
         y++;
     }

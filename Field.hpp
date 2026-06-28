@@ -8,11 +8,11 @@
 #include <utility>
 #include <vector>
 
-class abstract_Cell;
+class abstract_Biomass;
 
-class Nucleus {
+class Cell {
 private:
-    std::shared_ptr<abstract_Cell> cell = nullptr;
+    std::shared_ptr<abstract_Biomass> cell = nullptr;
 
     std::array<int, 2> cell_coordinates{0, 0};
 
@@ -20,19 +20,19 @@ private:
     Antibiotic antibiotic;
 
 public:
-    Nucleus() = default;
+    Cell() = default;
 
-    Nucleus(
+    Cell(
         int x,
         int y,
-        float start_food = 1.0f/0.0f,
+        float start_food = 100000000,
         float start_antibiotic = 0.0f
     );
 
     bool is_this_nucleus_free() const;
 
-    void set_cell(std::shared_ptr<abstract_Cell> new_cell);
-    std::shared_ptr<abstract_Cell> get_cell() const;
+    void set_cell(std::shared_ptr<abstract_Biomass> new_cell);
+    std::shared_ptr<abstract_Biomass> get_cell() const;
     void remove_cell();
 
     std::pair<float, float> situation_in_the_environment() const;
@@ -50,28 +50,28 @@ private:
     int width;
     int height;
 
-    std::vector<std::vector<Nucleus>> field;
+    std::vector<std::vector<Cell>> field;
 
     void process_dead_cells_disappearance();
 
 public:
     Field(int width, int height);
 
-    int normalize_x(int x) const;
+    bool is_x_inside(int x) const;
     bool is_y_inside(int y) const;
 
     int get_width() const;
     int get_height() const;
 
-    const std::vector<std::vector<Nucleus>>& get_field() const;
+    const std::vector<std::vector<Cell>>& get_field() const;
 
-    const Nucleus& get_nucleus(int x, int y) const;
-    Nucleus& get_nucleus(int x, int y);
+    const Cell& get_nucleus(int x, int y) const;
+    Cell& get_nucleus(int x, int y);
 
-    std::vector<Nucleus*> get_neighbours(int x, int y);
-    std::vector<Nucleus*> get_free_neighbours(int x, int y);
+    std::vector<Cell*> get_neighbours(int x, int y);
+    std::vector<Cell*> get_free_neighbours(int x, int y);
 
-    bool place_cell(int x, int y, std::shared_ptr<abstract_Cell> cell);
+    bool place_cell(int x, int y, std::shared_ptr<abstract_Biomass> cell);
 
     bool has_living_cells() const;
     void make_one_step();

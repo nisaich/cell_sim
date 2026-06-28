@@ -21,7 +21,6 @@ int Food::take(int wanted_amount) {
         return 0;
     }
 
-    // Infinite food should behave as an inexhaustible source.
     if (std::isinf(amount)) {
         return wanted_amount;
     }

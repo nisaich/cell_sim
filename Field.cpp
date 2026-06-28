@@ -1,11 +1,11 @@
 #include "Field.hpp"
 
-#include "Cell.hpp"
+#include "Biomass.hpp"
 
 #include <memory>
 #include <utility>
 
-Nucleus::Nucleus(
+Cell::Cell(
     int x,
     int y,
     float start_food,
@@ -15,46 +15,46 @@ Nucleus::Nucleus(
       food(start_food),
       antibiotic(start_antibiotic) {}
 
-bool Nucleus::is_this_nucleus_free() const {
+bool Cell::is_this_nucleus_free() const {
     return cell == nullptr;
 }
 
-void Nucleus::set_cell(std::shared_ptr<abstract_Cell> new_cell) {
+void Cell::set_cell(std::shared_ptr<abstract_Biomass> new_cell) {
     cell = std::move(new_cell);
 }
 
-std::shared_ptr<abstract_Cell> Nucleus::get_cell() const {
+std::shared_ptr<abstract_Biomass> Cell::get_cell() const {
     return cell;
 }
 
-void Nucleus::remove_cell() {
+void Cell::remove_cell() {
     cell = nullptr;
 }
 
-std::pair<float, float> Nucleus::situation_in_the_environment() const {
+std::pair<float, float> Cell::situation_in_the_environment() const {
     return {
         food.get_amount(),
         antibiotic.get_concentration()
     };
 }
 
-std::array<int, 2> Nucleus::coordinates() const {
+std::array<int, 2> Cell::coordinates() const {
     return cell_coordinates;
 }
 
-Food& Nucleus::get_food() {
+Food& Cell::get_food() {
     return food;
 }
 
-const Food& Nucleus::get_food() const {
+const Food& Cell::get_food() const {
     return food;
 }
 
-Antibiotic& Nucleus::get_antibiotic() {
+Antibiotic& Cell::get_antibiotic() {
     return antibiotic;
 }
 
-const Antibiotic& Nucleus::get_antibiotic() const {
+const Antibiotic& Cell::get_antibiotic() const {
     return antibiotic;
 }
 
@@ -71,8 +71,8 @@ Field::Field(int width, int height)
     }
 }
 
-int Field::normalize_x(int x) const {
-    return (x % width + width) % width;
+bool Field::is_x_inside(int x) const {
+    return x >= 0 && x < width;
 }
 
 bool Field::is_y_inside(int y) const {
@@ -87,16 +87,16 @@ int Field::get_height() const {
     return height;
 }
 
-Nucleus& Field::get_nucleus(int x, int y) {
-    return field[y][normalize_x(x)];
+Cell& Field::get_nucleus(int x, int y) {
+    return field[y][x];
 }
 
-const Nucleus& Field::get_nucleus(int x, int y) const {
-    return field[y][normalize_x(x)];
+const Cell& Field::get_nucleus(int x, int y) const {
+    return field[y][x];
 }
 
-std::vector<Nucleus*> Field::get_neighbours(int x, int y) {
-    std::vector<Nucleus*> neighbours;
+std::vector<Cell*> Field::get_neighbours(int x, int y) {
+    std::vector<Cell*> neighbours;
 
     const std::array<std::pair<int, int>, 4> directions = {
         std::pair<int, int>{0, -1},
@@ -106,10 +106,10 @@ std::vector<Nucleus*> Field::get_neighbours(int x, int y) {
     };
 
     for (const auto& direction : directions) {
-        int neighbour_x = normalize_x(x + direction.first);
+        int neighbour_x = x + direction.first;
         int neighbour_y = y + direction.second;
 
-        if (is_y_inside(neighbour_y)) {
+        if (is_x_inside(neighbour_x) && is_y_inside(neighbour_y)) {
             neighbours.push_back(&get_nucleus(neighbour_x, neighbour_y));
         }
     }
@@ -117,10 +117,10 @@ std::vector<Nucleus*> Field::get_neighbours(int x, int y) {
     return neighbours;
 }
 
-std::vector<Nucleus*> Field::get_free_neighbours(int x, int y) {
-    std::vector<Nucleus*> free_neighbours;
+std::vector<Cell*> Field::get_free_neighbours(int x, int y) {
+    std::vector<Cell*> free_neighbours;
 
-    for (Nucleus* neighbour : get_neighbours(x, y)) {
+    for (Cell* neighbour : get_neighbours(x, y)) {
         if (neighbour->is_this_nucleus_free()) {
             free_neighbours.push_back(neighbour);
         }
@@ -129,12 +129,12 @@ std::vector<Nucleus*> Field::get_free_neighbours(int x, int y) {
     return free_neighbours;
 }
 
-bool Field::place_cell(int x, int y, std::shared_ptr<abstract_Cell> cell) {
+bool Field::place_cell(int x, int y, std::shared_ptr<abstract_Biomass> cell) {
     if (!is_y_inside(y)) {
         return false;
     }
 
-    Nucleus& nucleus = get_nucleus(x, y);
+    Cell& nucleus = get_nucleus(x, y);
 
     if (!nucleus.is_this_nucleus_free()) {
         return false;
@@ -147,8 +147,8 @@ bool Field::place_cell(int x, int y, std::shared_ptr<abstract_Cell> cell) {
 
 bool Field::has_living_cells() const {
     for (const auto& row : field) {
-        for (const Nucleus& nucleus : row) {
-            std::shared_ptr<abstract_Cell> cell = nucleus.get_cell();
+        for (const Cell& nucleus : row) {
+            std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
             if (cell != nullptr && cell->is_alive()) {
                 return true;
@@ -162,8 +162,8 @@ bool Field::has_living_cells() const {
 void Field::process_dead_cells_disappearance() {
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            Nucleus& nucleus = get_nucleus(x, y);
-            std::shared_ptr<abstract_Cell> cell = nucleus.get_cell();
+            Cell& nucleus = get_nucleus(x, y);
+            std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
             if (cell == nullptr) {
                 continue;
@@ -187,7 +187,7 @@ void Field::make_one_step() {
 
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            std::shared_ptr<abstract_Cell> cell = field[y][x].get_cell();
+            std::shared_ptr<abstract_Biomass> cell = field[y][x].get_cell();
 
             if (cell != nullptr && cell->is_alive()) {
                 cells_for_this_step.emplace_back(x, y);
@@ -196,23 +196,23 @@ void Field::make_one_step() {
     }
 
     for (const auto& position : cells_for_this_step) {
-        Nucleus& nucleus = get_nucleus(position.first, position.second);
-        std::shared_ptr<abstract_Cell> cell = nucleus.get_cell();
+        Cell& nucleus = get_nucleus(position.first, position.second);
+        std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
         if (cell == nullptr || !cell->is_alive()) {
             continue;
         }
 
         if (cell->must_he_die()) {
-            nucleus.set_cell(std::make_shared<dead_Cell>());
+            nucleus.set_cell(std::make_shared<dead_Biomass>());
         } else {
             cell->increase_age();
         }
     }
 
     for (const auto& position : cells_for_this_step) {
-        Nucleus& nucleus = get_nucleus(position.first, position.second);
-        std::shared_ptr<abstract_Cell> cell = nucleus.get_cell();
+        Cell& nucleus = get_nucleus(position.first, position.second);
+        std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
         if (cell != nullptr && cell->is_alive()) {
             cell->food_consumption_from_environment(nucleus.get_food());
@@ -220,7 +220,7 @@ void Field::make_one_step() {
     }
 
     for (const auto& position : cells_for_this_step) {
-        std::shared_ptr<abstract_Cell> cell =
+        std::shared_ptr<abstract_Biomass> cell =
             get_nucleus(position.first, position.second).get_cell();
 
         if (cell != nullptr && cell->is_alive()) {
@@ -229,7 +229,7 @@ void Field::make_one_step() {
     }
 
     for (const auto& position : cells_for_this_step) {
-        std::shared_ptr<abstract_Cell> cell =
+        std::shared_ptr<abstract_Biomass> cell =
             get_nucleus(position.first, position.second).get_cell();
 
         if (cell != nullptr && cell->is_alive()) {
@@ -242,6 +242,6 @@ void Field::make_one_step() {
 }
 
 
-const std::vector<std::vector<Nucleus>>& Field::get_field() const {
+const std::vector<std::vector<Cell>>& Field::get_field() const {
     return field;
 }

@@ -33,7 +33,7 @@ public:
 
     virtual bool reproduction(Field& current_field, int x, int y);
     
-    virtual void depletion_of_savings();
+    virtual void depletion_of_savings(Food& food);
     virtual void step_after_death();
     virtual bool should_be_removed_from_field() const;
 };
@@ -60,14 +60,14 @@ public:
         float resistance,
         int max_age,
         int max_food_consumed,
-        int food_usage
+        float food_usage
     );
 
     bool is_alive() const override {
       return true;
     }
     
-    void depletion_of_savings() override;
+    void depletion_of_savings(Food& food) override;
 
     bool reproduction(Field& current_field, int x, int y) override;
 };

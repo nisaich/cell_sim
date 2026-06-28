@@ -170,7 +170,7 @@ std::vector<Cell*> Field::get_free_neighbours(int x, int y) {
 }
 
 bool Field::place_cell(int x, int y, std::shared_ptr<abstract_Biomass> cell) {
-    if (!is_y_inside(y)) {
+    if (!is_x_inside(x) || !is_y_inside(y)) {
         return false;
     }
 
@@ -261,11 +261,12 @@ void Field::make_one_step() {
     }
 
     for (const auto& position : cells_for_this_step) {
+        Cell& nucleus = get_nucleus(position.first, position.second);
         std::shared_ptr<abstract_Biomass> cell =
-            get_nucleus(position.first, position.second).get_cell();
+            nucleus.get_cell();
 
         if (cell != nullptr && cell->is_alive()) {
-            cell->depletion_of_savings();
+            cell->depletion_of_savings(nucleus.get_food());
         }
     }
 

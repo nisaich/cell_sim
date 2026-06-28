@@ -14,6 +14,7 @@ int abstract_Biomass::get_age() const {
 
 void abstract_Biomass::copy_common_state_to(abstract_Biomass& other) const {
     other.age_of_cell = age_of_cell;
+    other.biomass = biomass;
     other.max_amount_of_food_consumed = max_amount_of_food_consumed;
     other.using_food_for_step = using_food_for_step;
 
@@ -54,15 +55,14 @@ void abstract_Biomass::food_consumption_from_environment(Food& food) {
     }
 }
 
-void abstract_Biomass::depletion_of_savings() {
-    //----------------------------------------------------------
-    //Пока что так, там уж подумаем чо с этим всем делом делать:
-    //----------------------------------------------------------
-    //int food_in_this_Cell = food.get_amount();
-    //if (food_in_this_Cell > 0) {
-    //  food.take(using_food_for_step);
-    //}
-    //else (death, но пока без этого) 
+void abstract_Biomass::depletion_of_savings(Food& food) {
+    float available_food = food.get_amount();
+    if (available_food < using_food_for_step) {
+        biomass = std::max(0.0f, biomass - using_food_for_step);
+        return;
+    }
+
+    food.take(static_cast<int>(using_food_for_step));
 }
 
 bool abstract_Biomass::reproduction(Field& current_field, int x, int y) {
@@ -102,7 +102,7 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
 
     std::uniform_real_distribution<float> chance_distribution(0.00f, 1.00f);
 
-    float reproduction_chance = 0.02f;
+    float reproduction_chance = 0.018f;
 
     if (chance_distribution(generator) > reproduction_chance) {
       return false;
@@ -135,28 +135,37 @@ nonactive_Biomass::nonactive_Biomass(
     float resistance,
     int max_age,
     int max_food_consumed,
-    int food_usage
+    float food_usage
 ) {
     level_of_resistance = resistance * resistance_multiplier;
     
     max_age_of_cell = static_cast<int>(max_age * max_life_multiplier);
 
     max_amount_of_food_consumed = max_food_consumed;
-    using_food_for_step = food_usage;
+    using_food_for_step = food_usage * food_usage_multiplier;
 }
 
-void nonactive_Biomass::depletion_of_savings() {
-  //потом подумаем что здесь делать
+void nonactive_Biomass::depletion_of_savings(Food& food) {
+    float available_food = food.get_amount();
+    if (available_food < using_food_for_step) {
+        biomass = std::max(0.0f, biomass - using_food_for_step * food_usage_multiplier);
+        return;
+    }
+
+    food.take(static_cast<int>(using_food_for_step));
 }
 
 bool nonactive_Biomass::reproduction(Field& current_field, int x, int y) {
     const int activation_food_threshold = 10;
-    std::vector<Cell*> free_neighbours = current_field.get_free_neighbours(x, y);
+    Cell& nucleus = current_field.get_nucleus(x, y);
+    if (nucleus.get_food().get_amount() < activation_food_threshold) {
+        return false;
+    }
 
     auto active_cell = std::make_shared<active_Biomass>();
     copy_common_state_to(*active_cell);
 
-    current_field.get_nucleus(x, y).set_cell(active_cell);
+    nucleus.set_cell(active_cell);
 
     return active_cell->reproduction(current_field, x, y);
 }

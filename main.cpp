@@ -11,7 +11,7 @@ int main() {
     const int height = 60;
 
     Field simulation_field(width, height);
-    simulation_field.init_environment(100.0f);
+    simulation_field.init_environment(50.0f);
 
     //начальные клетки
     int y=0;

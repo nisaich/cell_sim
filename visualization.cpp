@@ -1,7 +1,7 @@
 #include "visualization.hpp"
 
 #include "Field.hpp"
-#include "Cell.hpp"
+#include "Biomass.hpp"
 
 #include <raylib.h>
 
@@ -20,7 +20,7 @@
 // ------------------------------------------------------------
 // Режим окрашивания поля
 // ------------------------------------------------------------
-enum class NucleusColorMode {
+enum class CellColorMode {
     Age, // Возраст
     Resistance, // Устойчивость к антибиотикам (резистентность)
     Nutrition // Количество пищи
@@ -30,20 +30,20 @@ enum class NucleusColorMode {
 // ------------------------------------------------------------
 // Форма ячеек поля
 // ------------------------------------------------------------
-enum class NucleusShapeMode {
+enum class CellShapeMode {
     Square, // Квадрат
     // Hexagon // Шестиугольник
 };
 
-class Cell;
+class Biomass;
 
 // ----------------------------------------------------------------------------------------------------------
 // Визуализация ячейки в зависимости от её состояния, возраста, количества пищи и устойчивости к антибиотикам
 // ----------------------------------------------------------------------------------------------------------
-class VisualizationNucleus {
+class VisualizationCell {
 protected:
-    // Клетка, которая лежит внутри Nucleus
-    std::shared_ptr<abstract_Cell> cell;
+    // Клетка, которая лежит внутри Cell
+    std::shared_ptr<abstract_Biomass> cell;
 
     float nutrition;
     float antibiotic;
@@ -58,8 +58,8 @@ protected:
     int max_age;
 
 public:
-    VisualizationNucleus(
-        const std::shared_ptr<abstract_Cell>& cell,
+    VisualizationCell(
+        const std::shared_ptr<abstract_Biomass>& cell,
         float nutrition,
         float antibiotic,
         float resistance
@@ -80,7 +80,7 @@ public:
         if (!cell->is_alive()) {
             state_nucleus = 3;
         }
-        else if (std::dynamic_pointer_cast<nonactive_Cell>(cell)) {
+        else if (std::dynamic_pointer_cast<nonactive_Biomass>(cell)) {
             state_nucleus = 2;
         }
         else {
@@ -91,7 +91,7 @@ public:
         max_age = cell->max_age_of_cell;
     }
 
-    virtual ~VisualizationNucleus() = default;
+    virtual ~VisualizationCell() = default;
 
     virtual Color getColor() const = 0;
 
@@ -140,15 +140,15 @@ protected:
 };
 
 // Окрашивание клетки в зависимости от возраста
-class AgeColorNucleus : public VisualizationNucleus {
+class AgeColorCell : public VisualizationCell {
 public:
-    AgeColorNucleus(
-        const std::shared_ptr<abstract_Cell>& cell,
+    AgeColorCell(
+        const std::shared_ptr<abstract_Biomass>& cell,
         float nutrition,
         float antibiotic,
         float resistance
     )
-        : VisualizationNucleus(cell, nutrition, antibiotic, resistance)
+        : VisualizationCell(cell, nutrition, antibiotic, resistance)
     {
     }
 
@@ -183,15 +183,15 @@ private:
 };
 
 // Окрашивание клетки в зависимости от устойчивости к антибиотикам
-class ResistanceColorNucleus : public VisualizationNucleus {
+class ResistanceColorCell : public VisualizationCell {
 public:
-    ResistanceColorNucleus(
-        const std::shared_ptr<abstract_Cell>& cell,
+    ResistanceColorCell(
+        const std::shared_ptr<abstract_Biomass>& cell,
         float nutrition,
         float antibiotic,
         float resistance
     )
-        : VisualizationNucleus(cell, nutrition, antibiotic, resistance)
+        : VisualizationCell(cell, nutrition, antibiotic, resistance)
     {
     }
 
@@ -209,15 +209,15 @@ public:
 };
 
 // Окрашивание клетки в зависимости от количества пищи
-class NutritionColorNucleus : public VisualizationNucleus {
+class NutritionColorCell : public VisualizationCell {
 public:
-    NutritionColorNucleus(
-        const std::shared_ptr<abstract_Cell>& cell,
+    NutritionColorCell(
+        const std::shared_ptr<abstract_Biomass>& cell,
         float nutrition,
         float antibiotic,
         float resistance
     )
-        : VisualizationNucleus(cell, nutrition, antibiotic, resistance)
+        : VisualizationCell(cell, nutrition, antibiotic, resistance)
     {
     }
 
@@ -239,21 +239,21 @@ public:
 // Визуализация ячейки в зависимости от её формы
 // ------------------------------------------------------------------------
 
-class VisualizationCell {
+class VisualizationBiomass {
 private:
     std::string shape;
 
     float sizeX;
     float sizeY;
 
-    NucleusColorMode colorMode;
+    CellColorMode colorMode;
 
 public:
-    VisualizationCell(
+    VisualizationBiomass(
         const std::string& shape,
         float sizeX,
         float sizeY,
-        NucleusColorMode colorMode
+        CellColorMode colorMode
     )
         : shape(shape),
           sizeX(sizeX),
@@ -265,7 +265,7 @@ public:
     void draw(
         int width,
         int height,
-        const std::vector<std::vector<Nucleus>>& field,
+        const std::vector<std::vector<Cell>>& field,
         float startX,
         float startY
     ) const {
@@ -275,12 +275,12 @@ public:
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                const Nucleus& nucleus = field[y][x];
+                const Cell& nucleus = field[y][x];
 
                 float drawX = startX + x * sizeX;
                 float drawY = startY + y * sizeY;
 
-                Color color = getNucleusColor(nucleus);
+                Color color = getCellColor(nucleus);
 
                 drawSquare(drawX, drawY, color);
             }
@@ -300,8 +300,8 @@ protected:
         );
     }
 
-    Color getNucleusColor(const Nucleus& nucleus) const {
-        std::shared_ptr<abstract_Cell> cell = nucleus.get_cell();
+    Color getCellColor(const Cell& nucleus) const {
+        std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
         auto environment = nucleus.situation_in_the_environment();
 
@@ -318,8 +318,8 @@ protected:
         }
 
         switch (colorMode) {
-            case NucleusColorMode::Age: {
-                AgeColorNucleus visual(
+            case CellColorMode::Age: {
+                AgeColorCell visual(
                     cell,
                     nutrition,
                     antibiotic,
@@ -329,8 +329,8 @@ protected:
                 return visual.getColor();
             }
 
-            case NucleusColorMode::Resistance: {
-                ResistanceColorNucleus visual(
+            case CellColorMode::Resistance: {
+                ResistanceColorCell visual(
                     cell,
                     nutrition,
                     antibiotic,
@@ -340,8 +340,8 @@ protected:
                 return visual.getColor();
             }
 
-            case NucleusColorMode::Nutrition: {
-                NutritionColorNucleus visual(
+            case CellColorMode::Nutrition: {
+                NutritionColorCell visual(
                     cell,
                     nutrition,
                     antibiotic,
@@ -363,22 +363,22 @@ protected:
 // ------------
 
 // Определяем по какому состаянию будет окрашеваться ячейка
-static NucleusColorMode getColorModeFromText(const std::string& colorMode) {
+static CellColorMode getColorModeFromText(const std::string& colorMode) {
     if (colorMode == "age") {
-        return NucleusColorMode::Age;
+        return CellColorMode::Age;
     }
     else if (colorMode == "resistance") {
-        return NucleusColorMode::Resistance;
+        return CellColorMode::Resistance;
     }
     else if (colorMode == "nutrition") {
-        return NucleusColorMode::Nutrition;
+        return CellColorMode::Nutrition;
     }
 
-    return NucleusColorMode::Age;
+    return CellColorMode::Age;
 }
 
 // Вычисляем размер ячейки в пикселях 
-static float calculateCellSize(
+static float calculateBiomassSize(
     int width,
     int height,
     int screenWidth,
@@ -401,7 +401,7 @@ void visualize(
     int width = simulation_field.get_width();
     int height = simulation_field.get_height();
 
-    InitWindow(800, 600, "Cell visualization");
+    InitWindow(800, 600, "Biomass visualization");
 
     int monitor = GetCurrentMonitor();
 
@@ -414,7 +414,7 @@ void visualize(
 
     SetTargetFPS(0);
 
-    float cellSize = calculateCellSize(
+    float cellSize = calculateBiomassSize(
         width,
         height,
         screenWidth,
@@ -427,9 +427,9 @@ void visualize(
     float startX = (screenWidth - fieldPixelWidth) / 2.0f;
     float startY = (screenHeight - fieldPixelHeight) / 2.0f;
 
-    NucleusColorMode mode = getColorModeFromText(colorMode);
+    CellColorMode mode = getColorModeFromText(colorMode);
 
-    VisualizationCell visualizationCell(
+    VisualizationBiomass visualizationBiomass(
         "square",
         cellSize,
         cellSize,
@@ -445,7 +445,7 @@ void visualize(
 
         ClearBackground(RAYWHITE);
 
-        visualizationCell.draw(
+        visualizationBiomass.draw(
             width,
             height,
             simulation_field.get_field(),

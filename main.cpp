@@ -11,20 +11,20 @@ int main() {
     const int height = 60;
 
     Field simulation_field(width, height);
+    simulation_field.init_environment(100.0f);
 
     //начальные клетки
     int y=0;
     for (int x = width/2; x < width/2+1; ++x) {
-        simulation_field.place_cell(
-            x,
-            height-1,
-            std::make_shared<active_Biomass>()
-        );
-        y++;
+      simulation_field.place_cell(
+        x,
+        height-1,
+        std::make_shared<active_Biomass>()
+      );
     }
 
     //непосредственная симуляция
-    visualize(simulation_field, "age");
+    visualize(simulation_field, "nutrition");
 
     return 0;
 }

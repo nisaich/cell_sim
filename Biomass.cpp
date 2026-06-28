@@ -30,8 +30,8 @@ float abstract_Biomass::get_biomass() const {
   return biomass;
 }
 
-bool abstract_Biomass::must_he_die() const {
-    return age_of_cell >= max_age_of_cell;
+bool abstract_Biomass::must_he_die(Food& food) const {
+    return age_of_cell >= max_age_of_cell || food.get_amount()<=using_food_for_step;
 }
 
 void abstract_Biomass::increase_age() {
@@ -122,8 +122,6 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
       max_age_of_cell
     );
     child->biomass = child_biomass;
-
-    biomass=biomass/2;
 
     child->max_amount_of_food_consumed = max_amount_of_food_consumed;
     child->using_food_for_step = using_food_for_step;

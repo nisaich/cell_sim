@@ -10,7 +10,7 @@ protected:
 //все данные параметры впоследствии необходимо будет менять(ну както подыскать реальные в природе)//
     int max_amount_of_food_consumed = 2;
     float biomass = 0.01;
-    float using_food_for_step = 0 * biomass; //пока что можно поставить 0
+    float using_food_for_step = 0.01 * biomass;  //пока что можно поставить 0
 
     void copy_common_state_to(abstract_Biomass& other) const;
 
@@ -24,7 +24,7 @@ public:
     float get_level_of_resistance() const;
     float get_biomass() const;
 
-    bool must_he_die() const;
+    bool must_he_die(Food& food) const;
     void increase_age();
 
     void food_consumption_from_environment(Food& food);
@@ -74,7 +74,7 @@ public:
 
 class dead_Biomass : public abstract_Biomass {
 private:
-    int count_of_steps_to_disappearance = 30;
+    int count_of_steps_to_disappearance = 3;
 
 public:
     int count_of_steps_from_death = 0;

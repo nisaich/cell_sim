@@ -9,7 +9,7 @@ public:
     explicit Food(float start_amount);
 
     float get_amount() const;
-
+    void set_amount(float value);
     void add(float value);
     int take(int wanted_amount);
 };

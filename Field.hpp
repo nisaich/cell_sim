@@ -1,4 +1,5 @@
 #pragma once
+#include "SimulationConfig.hpp"
 #include <cmath>
 #include "Food.hpp"
 #include "Antibiotic.hpp"
@@ -64,7 +65,9 @@ public:
     int get_height() const;
     
     void diffuse_food ();
-    void init_environment(float initial_food = 10.0f);
+    void init_environment(
+        float initial_food = simulation_config::field::default_initial_food
+    );
 
     const std::vector<std::vector<Cell>>& get_field() const;
 

@@ -2,6 +2,8 @@
 
 #include "Field.hpp"
 #include "Biomass.hpp"
+#include "Graphs.hpp"
+#include "SimulationConfig.hpp"
 
 #include <raylib.h>
 
@@ -175,10 +177,12 @@ private:
             static_cast<float>(max_age);
 
         ageRatio = std::clamp(ageRatio, 0.0f, 1.0f);
+        ageRatio = std::sqrt(ageRatio);
 
-        float minBrightness = 0.35f;
+        float minBrightness = simulation_config::visualization::min_brightness;
 
-        return minBrightness + (1.0f - ageRatio) * (1.0f - minBrightness);
+        return minBrightness + (1.0f - ageRatio) *
+            simulation_config::visualization::brightness_span;
     }
 };
 
@@ -202,7 +206,8 @@ public:
             return baseColor;
         }
 
-        float brightness = 0.35f + resistance * 0.65f;
+        float brightness = simulation_config::visualization::min_brightness +
+            resistance * simulation_config::visualization::brightness_span;
 
         return applyBrightness(baseColor, brightness);
     }
@@ -224,7 +229,15 @@ public:
     Color getColor() const override {
       // Пустая клетка — показываем еду синим
       if (cell == nullptr) {
-        return applyBrightness(Color{0, 100, 255, 255}, nutrition);
+        return applyBrightness(
+            Color{
+                simulation_config::visualization::empty_cell_blue_r,
+                simulation_config::visualization::empty_cell_blue_g,
+                simulation_config::visualization::empty_cell_blue_b,
+                255
+            },
+            nutrition
+        );
       }
 
       // Мёртвая клетка — красная, еду не показываем
@@ -233,7 +246,8 @@ public:
       }
 
       // Живая клетка — зелёная/жёлтая, яркость по еде
-      float brightness = 0.35f + nutrition * 0.65f;
+      float brightness = simulation_config::visualization::min_brightness +
+          nutrition * simulation_config::visualization::brightness_span;
       return applyBrightness(getBaseColor(), brightness);
     }
 };
@@ -312,7 +326,11 @@ protected:
         float foodInEnvironment = environment.first;
         float antibioticInEnvironment = environment.second;
 
-        float nutrition = std::clamp(foodInEnvironment / 100.0f, 0.0f, 1.0f);
+        float nutrition = std::clamp(
+            foodInEnvironment / simulation_config::visualization::modified_nutrition_normalizer,
+            0.0f,
+            1.0f
+        );
         float antibiotic = std::clamp(antibioticInEnvironment, 0.0f, 1.0f);
 
         float resistance = 0.0f;
@@ -385,11 +403,11 @@ static CellColorMode getColorModeFromText(const std::string& colorMode) {
 static float calculateBiomassSize(
     int width,
     int height,
-    int screenWidth,
+    int availableWidth,
     int screenHeight
 ) {
     float cellSizeByWidth =
-        static_cast<float>(screenWidth) / static_cast<float>(width);
+        static_cast<float>(availableWidth) / static_cast<float>(width);
 
     float cellSizeByHeight =
         static_cast<float>(screenHeight) / static_cast<float>(height);
@@ -405,25 +423,33 @@ void visualize(
     int height = simulation_field.get_height();
 
     // Инициализируем стандартное окно, чтобы Raylib подтянул данные монитора
-    InitWindow(800, 600, "Biomass visualization");
+    InitWindow(
+        simulation_config::visualization::initial_window_width,
+        simulation_config::visualization::initial_window_height,
+        "Biomass visualization"
+    );
 
     int monitor = GetCurrentMonitor();
+    const int graphPanelWidth = simulation_config::visualization::graph_panel_width;
+    const int contentGap = simulation_config::visualization::modified_content_gap;
     
     // Берем размеры монитора, но оставляем небольшой запас (например, 100 пикселей), 
     // чтобы окно не перекрывалось панелью задач ОС
-    int maxScreenWidth = GetMonitorWidth(monitor) - 100;
-    int maxScreenHeight = GetMonitorHeight(monitor) - 100;
+    int maxScreenWidth = GetMonitorWidth(monitor) -
+        simulation_config::visualization::modified_window_screen_margin;
+    int maxScreenHeight = GetMonitorHeight(monitor) -
+        simulation_config::visualization::modified_window_screen_margin;
 
     // Вычисляем размер ячейки исходя из доступного места на экране
     float cellSize = calculateBiomassSize(
         width,
         height,
-        maxScreenWidth,
+        maxScreenWidth - graphPanelWidth - contentGap,
         maxScreenHeight
     );
 
     // Вычисляем точный размер окна в пикселях (размер поля * размер одной ячейки)
-    int windowWidth = static_cast<int>(width * cellSize);
+    int windowWidth = static_cast<int>(width * cellSize) + graphPanelWidth + contentGap;
     int windowHeight = static_cast<int>(height * cellSize);
 
     // Подгоняем окно под точный размер поля
@@ -437,7 +463,7 @@ void visualize(
     // Полный экран нам больше не нужен, убираем эту строку:
     // ToggleFullscreen(); 
 
-    SetTargetFPS(0);
+    SetTargetFPS(simulation_config::visualization::target_fps);
 
     // Так как окно теперь идеально совпадает с размером поля, 
     // отрисовывать начинаем прямо с левого верхнего угла
@@ -452,12 +478,27 @@ void visualize(
         cellSize,
         mode
     );
+    const std::string statsPath = "simulation_stats.csv";
+    CsvStatsRecorder statsRecorder(statsPath);
+    StatsHistory statsHistory;
+    int tick = 0;
+
+    if (statsRecorder.is_open()) {
+        statsRecorder.record(simulation_field, tick);
+    }
+    statsHistory.record(simulation_field, tick);
 
     // Если симуляция тормозит, можешь вернуть сюда цикл for на несколько шагов, 
     // как мы обсуждали ранее
     while (!WindowShouldClose()) {
         if (simulation_field.has_living_cells()) {
             simulation_field.make_one_step();
+            ++tick;
+
+            if (statsRecorder.is_open()) {
+                statsRecorder.record(simulation_field, tick);
+            }
+            statsHistory.record(simulation_field, tick);
         }
 
         BeginDrawing();
@@ -470,6 +511,12 @@ void visualize(
             simulation_field.get_field(),
             startX,
             startY
+        );
+        statsHistory.draw(
+            static_cast<int>(width * cellSize + contentGap),
+            0,
+            graphPanelWidth,
+            windowHeight
         );
 
         EndDrawing();

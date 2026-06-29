@@ -1,5 +1,4 @@
 #include "Field.hpp"
-static constexpr float FOOD_DIFFUSION_COEFF = 0.2f;
 
 #include "Biomass.hpp"
 
@@ -95,7 +94,8 @@ void Field::diffuse_food() {
                 sum_neighbors += nb->get_food().get_amount();
             }
 
-            float new_val = current + FOOD_DIFFUSION_COEFF * (sum_neighbors - 4.0f * current);
+            float new_val = current + simulation_config::field::food_diffusion_coeff *
+                (sum_neighbors - 4.0f * current);
 
             if (new_val < 0.0f) new_val = 0.0f;
             new_food[y][x] = new_val;
@@ -266,6 +266,7 @@ void Field::make_one_step() {
             nucleus.get_cell();
 
         if (cell != nullptr && cell->is_alive()) {
+            cell->set_nucleus(&nucleus);
             cell->depletion_of_savings(nucleus.get_food());
         }
     }

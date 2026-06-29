@@ -2,6 +2,8 @@
 
 #include "Field.hpp"
 #include "Biomass.hpp"
+#include "Graphs.hpp"
+#include "SimulationConfig.hpp"
 
 #include <raylib.h>
 
@@ -175,10 +177,12 @@ private:
             static_cast<float>(max_age);
 
         ageRatio = std::clamp(ageRatio, 0.0f, 1.0f);
+        ageRatio = std::sqrt(ageRatio);
 
-        float minBrightness = 0.35f;
+        float minBrightness = simulation_config::visualization::min_brightness;
 
-        return minBrightness + (1.0f - ageRatio) * (1.0f - minBrightness);
+        return minBrightness + (1.0f - ageRatio) *
+            simulation_config::visualization::brightness_span;
     }
 };
 
@@ -202,7 +206,8 @@ public:
             return baseColor;
         }
 
-        float brightness = 0.35f + resistance * 0.65f;
+        float brightness = simulation_config::visualization::min_brightness +
+            resistance * simulation_config::visualization::brightness_span;
 
         return applyBrightness(baseColor, brightness);
     }
@@ -228,7 +233,8 @@ public:
             return baseColor;
         }
 
-        float brightness = 0.35f + nutrition * 0.65f;
+        float brightness = simulation_config::visualization::min_brightness +
+            nutrition * simulation_config::visualization::brightness_span;
 
         return applyBrightness(baseColor, brightness);
     }
@@ -308,7 +314,11 @@ protected:
         float foodInEnvironment = environment.first;
         float antibioticInEnvironment = environment.second;
 
-        float nutrition = std::clamp(foodInEnvironment / 30.0f, 0.0f, 1.0f);
+        float nutrition = std::clamp(
+            foodInEnvironment / simulation_config::visualization::standard_nutrition_normalizer,
+            0.0f,
+            1.0f
+        );
         float antibiotic = std::clamp(antibioticInEnvironment, 0.0f, 1.0f);
 
         float resistance = 0.0f;
@@ -381,11 +391,11 @@ static CellColorMode getColorModeFromText(const std::string& colorMode) {
 static float calculateBiomassSize(
     int width,
     int height,
-    int screenWidth,
+    int availableWidth,
     int screenHeight
 ) {
     float cellSizeByWidth =
-        static_cast<float>(screenWidth) / static_cast<float>(width);
+        static_cast<float>(availableWidth) / static_cast<float>(width);
 
     float cellSizeByHeight =
         static_cast<float>(screenHeight) / static_cast<float>(height);
@@ -401,30 +411,35 @@ void visualize(
     int width = simulation_field.get_width();
     int height = simulation_field.get_height();
 
-    InitWindow(800, 600, "Biomass visualization");
+    InitWindow(
+        simulation_config::visualization::initial_window_width,
+        simulation_config::visualization::initial_window_height,
+        "Biomass visualization"
+    );
 
     int monitor = GetCurrentMonitor();
 
     int screenWidth = GetMonitorWidth(monitor);
     int screenHeight = GetMonitorHeight(monitor);
+    const int graphPanelWidth = simulation_config::visualization::graph_panel_width;
 
     SetWindowSize(screenWidth, screenHeight);
     SetWindowPosition(0, 0);
     ToggleFullscreen();
 
-    SetTargetFPS(0);
+    SetTargetFPS(simulation_config::visualization::target_fps);
 
     float cellSize = calculateBiomassSize(
         width,
         height,
-        screenWidth,
+        screenWidth - graphPanelWidth - 2 * simulation_config::visualization::outer_margin,
         screenHeight
     );
 
     float fieldPixelWidth = width * cellSize;
     float fieldPixelHeight = height * cellSize;
 
-    float startX = (screenWidth - fieldPixelWidth) / 2.0f;
+    float startX = static_cast<float>(simulation_config::visualization::outer_margin);
     float startY = (screenHeight - fieldPixelHeight) / 2.0f;
 
     CellColorMode mode = getColorModeFromText(colorMode);
@@ -435,10 +450,25 @@ void visualize(
         cellSize,
         mode
     );
+    const std::string statsPath = "simulation_stats.csv";
+    CsvStatsRecorder statsRecorder(statsPath);
+    StatsHistory statsHistory;
+    int tick = 0;
+
+    if (statsRecorder.is_open()) {
+        statsRecorder.record(simulation_field, tick);
+    }
+    statsHistory.record(simulation_field, tick);
 
     while (!WindowShouldClose()) {
         if (simulation_field.has_living_cells()) {
             simulation_field.make_one_step();
+            ++tick;
+
+            if (statsRecorder.is_open()) {
+                statsRecorder.record(simulation_field, tick);
+            }
+            statsHistory.record(simulation_field, tick);
         }
 
         BeginDrawing();
@@ -452,11 +482,15 @@ void visualize(
             startX,
             startY
         );
+        statsHistory.draw(
+            static_cast<int>(startX + fieldPixelWidth + 20.0f),
+            simulation_config::visualization::outer_margin,
+            graphPanelWidth,
+            screenHeight - 2 * simulation_config::visualization::outer_margin
+        );
 
         EndDrawing();
     }
 
     CloseWindow();
 }
-
-

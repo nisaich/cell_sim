@@ -25,7 +25,7 @@ public:
     Cell(
         int x,
         int y,
-        float start_food = 100000000,
+        float start_food = 0,
         float start_antibiotic = 0.0f
     );
 
@@ -62,6 +62,9 @@ public:
 
     int get_width() const;
     int get_height() const;
+    
+    void diffuse_food ();
+    void init_environment(float initial_food = 10.0f);
 
     const std::vector<std::vector<Cell>>& get_field() const;
 

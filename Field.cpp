@@ -1,4 +1,5 @@
 #include "Field.hpp"
+static constexpr float FOOD_DIFFUSION_COEFF = 0.2f;
 
 #include "Biomass.hpp"
 
@@ -71,6 +72,45 @@ Field::Field(int width, int height)
     }
 }
 
+void Field::init_environment(float initial_food) {
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            get_nucleus(x, y).get_food().set_amount(initial_food);
+            // антибиотик пока оставляем 0 (будет добавлен позже)
+        }
+    }
+}
+
+
+void Field::diffuse_food() {
+    // временная матрица для новых значений
+    std::vector<std::vector<float>> new_food(height, std::vector<float>(width, 0.0f));
+
+    
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            float current = get_nucleus(x, y).get_food().get_amount();
+            float sum_neighbors = 0.0f;
+            for (Cell* nb : get_neighbours(x, y)) {
+                sum_neighbors += nb->get_food().get_amount();
+            }
+
+            float new_val = current + FOOD_DIFFUSION_COEFF * (sum_neighbors - 4.0f * current);
+
+            if (new_val < 0.0f) new_val = 0.0f;
+            new_food[y][x] = new_val;
+        }
+    }
+    // применение новых значений
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            get_nucleus(x, y).get_food().set_amount(new_food[y][x]);
+        }
+    }
+}
+//0.1 будет означать что растекаться со скоростью 10 процентов
+
+
 bool Field::is_x_inside(int x) const {
     return x >= 0 && x < width;
 }
@@ -130,7 +170,7 @@ std::vector<Cell*> Field::get_free_neighbours(int x, int y) {
 }
 
 bool Field::place_cell(int x, int y, std::shared_ptr<abstract_Biomass> cell) {
-    if (!is_y_inside(y)) {
+    if (!is_x_inside(x) || !is_y_inside(y)) {
         return false;
     }
 
@@ -183,7 +223,8 @@ void Field::process_dead_cells_disappearance() {
 }
 
 void Field::make_one_step() {
-    std::vector<std::pair<int, int>> cells_for_this_step;
+  diffuse_food();  
+  std::vector<std::pair<int, int>> cells_for_this_step;
 
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
@@ -203,7 +244,7 @@ void Field::make_one_step() {
             continue;
         }
 
-        if (cell->must_he_die()) {
+        if (cell->must_he_die(nucleus.get_food())) {
             nucleus.set_cell(std::make_shared<dead_Biomass>());
         } else {
             cell->increase_age();
@@ -220,11 +261,12 @@ void Field::make_one_step() {
     }
 
     for (const auto& position : cells_for_this_step) {
+        Cell& nucleus = get_nucleus(position.first, position.second);
         std::shared_ptr<abstract_Biomass> cell =
-            get_nucleus(position.first, position.second).get_cell();
+            nucleus.get_cell();
 
         if (cell != nullptr && cell->is_alive()) {
-            cell->depletion_of_savings();
+            cell->depletion_of_savings(nucleus.get_food());
         }
     }
 

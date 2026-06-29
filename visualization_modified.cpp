@@ -222,15 +222,19 @@ public:
     }
 
     Color getColor() const override {
-        Color baseColor = getBaseColor();
+      // Пустая клетка — показываем еду синим
+      if (cell == nullptr) {
+        return applyBrightness(Color{0, 100, 255, 255}, nutrition);
+      }
 
-        if (cell == nullptr || !cell->is_alive()) {
-            return baseColor;
-        }
+      // Мёртвая клетка — красная, еду не показываем
+      if (!cell->is_alive()) {
+        return getBaseColor();
+      }
 
-        float brightness = 0.35f + nutrition * 0.65f;
-
-        return applyBrightness(baseColor, brightness);
+      // Живая клетка — зелёная/жёлтая, яркость по еде
+      float brightness = 0.35f + nutrition * 0.65f;
+      return applyBrightness(getBaseColor(), brightness);
     }
 };
 
@@ -308,7 +312,7 @@ protected:
         float foodInEnvironment = environment.first;
         float antibioticInEnvironment = environment.second;
 
-        float nutrition = std::clamp(foodInEnvironment / 30.0f, 0.0f, 1.0f);
+        float nutrition = std::clamp(foodInEnvironment / 100.0f, 0.0f, 1.0f);
         float antibiotic = std::clamp(antibioticInEnvironment, 0.0f, 1.0f);
 
         float resistance = 0.0f;

@@ -10,6 +10,10 @@ float Food::get_amount() const {
     return amount;
 }
 
+void Food::set_amount(float value) {
+    amount = (value >= 0.0f) ? value : 0.0f;
+}
+
 void Food::add(float value) {
     if (value > 0.0f) {
         amount += value;
@@ -19,10 +23,6 @@ void Food::add(float value) {
 int Food::take(int wanted_amount) {
     if (wanted_amount <= 0) {
         return 0;
-    }
-
-    if (std::isinf(amount)) {
-        return wanted_amount;
     }
 
     int available = static_cast<int>(amount);

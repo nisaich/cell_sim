@@ -80,5 +80,5 @@ public:
     bool place_cell(int x, int y, std::shared_ptr<abstract_Biomass> cell);
 
     bool has_living_cells() const;
-    void make_one_step();
+    void make_one_step(int number_of_step);
 };

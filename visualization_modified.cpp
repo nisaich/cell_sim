@@ -492,7 +492,7 @@ void visualize(
     // как мы обсуждали ранее
     while (!WindowShouldClose()) {
         if (simulation_field.has_living_cells()) {
-            simulation_field.make_one_step();
+            simulation_field.make_one_step(tick);
             ++tick;
 
             if (statsRecorder.is_open()) {

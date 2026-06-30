@@ -20,15 +20,14 @@ void Food::add(float value) {
     }
 }
 
-int Food::take(int wanted_amount) {
-    if (wanted_amount <= 0) {
-        return 0;
+float Food::take(float wanted_amount) {
+    if (wanted_amount <= 0.0f) {
+        return 0.0f;
     }
 
-    int available = static_cast<int>(amount);
-    int taken = std::min(available, wanted_amount);
+    float taken = std::min(amount, wanted_amount);
 
-    amount -= static_cast<float>(taken);
+    amount -= taken;
 
     return taken;
 }

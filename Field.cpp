@@ -1,5 +1,4 @@
 #include "Field.hpp"
-static constexpr float FOOD_DIFFUSION_COEFF = 0.2f;
 
 #include "Biomass.hpp"
 
@@ -94,8 +93,9 @@ void Field::diffuse_food() {
             for (Cell* nb : get_neighbours(x, y)) {
                 sum_neighbors += nb->get_food().get_amount();
             }
-
-            float new_val = current + FOOD_DIFFUSION_COEFF * (sum_neighbors - 4.0f * current);
+            float num_neighbors = static_cast<float>(get_neighbours(x, y).size());
+            float new_val = current + simulation_config::field::food_diffusion_coeff *
+                (sum_neighbors - num_neighbors * current);
 
             if (new_val < 0.0f) new_val = 0.0f;
             new_food[y][x] = new_val;
@@ -222,8 +222,10 @@ void Field::process_dead_cells_disappearance() {
     }
 }
 
-void Field::make_one_step() {
-  diffuse_food();  
+void Field::make_one_step(int number_of_step) {
+  if (number_of_step % simulation_config::visualization::number_of_step_to_diffuse == 0){
+    diffuse_food();
+  }
   std::vector<std::pair<int, int>> cells_for_this_step;
 
     for (int y = 0; y < height; ++y) {
@@ -266,6 +268,7 @@ void Field::make_one_step() {
             nucleus.get_cell();
 
         if (cell != nullptr && cell->is_alive()) {
+            cell->set_nucleus(&nucleus);
             cell->depletion_of_savings(nucleus.get_food());
         }
     }

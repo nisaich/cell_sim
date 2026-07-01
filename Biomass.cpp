@@ -55,16 +55,18 @@ void abstract_Biomass::food_consumption_from_environment(Food& food) {
     float wanted_food = std::min(food.get_amount(), static_cast<float>(max_amount_of_food_consumed));
     if (wanted_food > 0.0f) {
         float eaten = food.take(wanted_food);
-        biomass += eaten * biomass * simulation_config::biomass::biomass_growth_per_eaten_unit;
+        biomass += eaten;
     }
 }
 
 void abstract_Biomass::depletion_of_savings(Food& food) {
     float available_food = food.get_amount();
-    if (steps_for_nonactivating != simulation_config::biomass::steps_for_nonactivating && steps_for_nonactivating != 0){
+    if (steps_for_nonactivating != simulation_config::biomass::steps_for_nonactivating && \
+        steps_for_nonactivating != 0){
       steps_for_nonactivating--;
     }
-    else if (available_food < steps_to_live_forward * using_food_for_step) {
+    else if (available_food < steps_to_live_forward * using_food_for_step && \
+        steps_for_nonactivating >0) {
       steps_for_nonactivating--;
     }
     else if(steps_for_nonactivating == 0){
@@ -92,7 +94,9 @@ bool active_Biomass::is_alive() const {
 
 bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     std::vector<Cell*> free_neighbours = current_field.get_free_neighbours(x, y);
-
+    if (max_count_reps == 0) {
+      return false;
+    }
     if (free_neighbours.empty()) {
       return false;
     }
@@ -119,7 +123,7 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     Cell* place_for_child = free_neighbours[distribution(generator)];
 
     float child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
-    biomass = child_biomass;
+    biomass = biomass - child_biomass;
     auto child = std::make_shared<active_Biomass>(
       level_of_resistance,
       max_age_of_cell
@@ -168,7 +172,7 @@ bool nonactive_Biomass::reproduction(Field& current_field, int x, int y) {
     if (nucleus.get_food().get_amount() < steps_to_live_forward * food_now) {
         return false;
     }
-    else if (steps_for_nonactivating == simulation_config::biomass::steps_for_nonactivating) {
+    else if (steps_for_nonactivating > 0) {
       steps_for_nonactivating--;
     }
     else if (steps_for_nonactivating == 0){

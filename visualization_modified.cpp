@@ -245,9 +245,14 @@ public:
         return getBaseColor();
       }
 
-      // Живая клетка — зелёная/жёлтая, яркость по еде
+      // Живая клетка — зелёная/жёлтая, яркость по биомассе
+      float biomass_ratio = std::clamp(
+          cell->get_biomass() / simulation_config::biomass::reproduction_min_biomass,
+          0.0f,
+          1.0f
+      );
       float brightness = simulation_config::visualization::min_brightness +
-          nutrition * simulation_config::visualization::brightness_span;
+          biomass_ratio * simulation_config::visualization::brightness_span;
       return applyBrightness(getBaseColor(), brightness);
     }
 };

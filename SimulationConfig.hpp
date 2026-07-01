@@ -3,11 +3,11 @@
 namespace simulation_config {
 
 namespace field {
-inline constexpr int width = 250;
-inline constexpr int height = 250;
-inline constexpr float initial_food = 200.0f;
-inline constexpr float default_initial_food = 200.0f;
-inline constexpr float food_diffusion_coeff = 0.1f;
+inline constexpr int width = 50;
+inline constexpr int height = 50;
+inline constexpr float initial_food = 0.5f;
+inline constexpr float default_initial_food = 0.5f;
+inline constexpr float food_diffusion_coeff = 0.25f;  //не больше 25%
 }
 
 namespace colony {
@@ -17,6 +17,7 @@ inline constexpr int initial_cells_y_from_bottom = 1;
 }
 
 namespace biomass {
+inline constexpr int max_count_reps = 3;
 inline constexpr float initial_biomass = 0.01f;
 inline constexpr float default_max_food_consumed = 1 * initial_biomass;
 inline constexpr float food_usage_per_step = 0.001f * initial_biomass;
@@ -25,15 +26,15 @@ inline constexpr int default_max_age = 300000;
 inline constexpr float default_resistance = 0.0f;
 inline constexpr float biomass_growth_per_eaten_unit = 0.1f;
 inline constexpr float reproduction_min_biomass = 1.0f;
-inline constexpr float reproduction_chance = 0.2f;
+inline constexpr float reproduction_chance = 0.01f;
 inline constexpr float child_biomass_ratio = 0.5f;
 inline constexpr int steps_for_nonactivating = 10;
 inline constexpr int steps_to_live_forward = 2 * steps_for_nonactivating;
 inline constexpr float nonactive_resistance_multiplier = 1.5f;
-inline constexpr float nonactive_food_usage_multiplier = 0.75f;
-inline constexpr float nonactive_max_life_multiplier = 1.5f;
+inline constexpr float nonactive_food_usage_multiplier = 0.25f;
+inline constexpr float nonactive_max_life_multiplier = 4.0f;
 inline constexpr float nonactive_biomass_loss_multiplier = 0.75f;
-inline constexpr int dead_steps_to_disappearance = 0;
+inline constexpr int dead_steps_to_disappearance = 100;
 }
 
 namespace graphs {
@@ -51,8 +52,8 @@ inline constexpr int header_bottom = 92;
 }
 
 namespace visualization {
-inline constexpr const int number_of_step_to_diffuse = 10; 
-inline constexpr const char* default_color_mode = "age";
+inline constexpr const int number_of_step_to_diffuse = 1; 
+inline constexpr const char* default_color_mode = "nutrition";
 inline constexpr int initial_window_width = 800;
 inline constexpr int initial_window_height = 600;
 inline constexpr int graph_panel_width = 420;
@@ -62,8 +63,8 @@ inline constexpr int modified_content_gap = 20;
 inline constexpr int target_fps = 0;
 inline constexpr float min_brightness = 0.35f;
 inline constexpr float brightness_span = 0.65f;
-inline constexpr float standard_nutrition_normalizer = 30.0f;
-inline constexpr float modified_nutrition_normalizer = 2.5f;
+inline constexpr float standard_nutrition_normalizer = 0.1f;
+inline constexpr float modified_nutrition_normalizer = 0.1f;
 inline constexpr unsigned char empty_cell_blue_r = 0;
 inline constexpr unsigned char empty_cell_blue_g = 100;
 inline constexpr unsigned char empty_cell_blue_b = 255;

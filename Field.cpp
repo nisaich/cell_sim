@@ -111,6 +111,53 @@ void Field::diffuse_food() {
 }
 //0.1 будет означать что растекаться со скоростью 10 процентов
 
+void Field::diffuse_biomass() {
+    // Временная матрица для новых значений биомассы
+    std::vector<std::vector<float>> new_biomass(height, std::vector<float>(width, 0.0f));
+
+    #pragma omp parallel for collapse(2) schedule(static)
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            std::shared_ptr<abstract_Biomass> cell = get_nucleus(x, y).get_cell();
+            // Диффузия происходит только если текущая клетка является активной биомассой
+            if (cell != nullptr && dynamic_cast<active_Biomass*>(cell.get()) != nullptr) {
+                float current = cell->get_biomass();
+                float sum_neighbors = 0.0f;
+                float num_active_neighbors = 0.0f;
+
+                for (Cell* nb : get_neighbours(x, y)) {
+                    std::shared_ptr<abstract_Biomass> nb_cell = nb->get_cell();
+                    // Рассматриваем только тех соседей, которые также являются активными клетками
+                    if (nb_cell != nullptr && dynamic_cast<active_Biomass*>(nb_cell.get()) != nullptr) {
+                        sum_neighbors += nb_cell->get_biomass();
+                        num_active_neighbors += 1.0f;
+                    }
+                }
+
+                float new_val = current;
+                if (num_active_neighbors > 0.0f) {
+                    new_val = current + simulation_config::field::biomass_diffusion_coeff *
+                        (sum_neighbors - num_active_neighbors * current);
+                }
+
+                if (new_val < 0.0f) new_val = 0.0f;
+                new_biomass[y][x] = new_val;
+            }
+        }
+    }
+
+    // Применение новых значений биомассы напрямую через дружественный доступ Field
+    #pragma omp parallel for collapse(2) schedule(static)
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            std::shared_ptr<abstract_Biomass> cell = get_nucleus(x, y).get_cell();
+            if (cell != nullptr && dynamic_cast<active_Biomass*>(cell.get()) != nullptr) {
+                cell->biomass = new_biomass[y][x];
+            }
+        }
+    }
+}
+
 
 bool Field::is_x_inside(int x) const {
     return x >= 0 && x < width;
@@ -227,6 +274,7 @@ void Field::process_dead_cells_disappearance() {
 void Field::make_one_step(int number_of_step) {
   if (number_of_step % simulation_config::visualization::number_of_step_to_diffuse == 0){
     diffuse_food();
+    diffuse_biomass();
   }
   std::vector<std::pair<int, int>> cells_for_this_step;
 

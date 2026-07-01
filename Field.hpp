@@ -65,6 +65,7 @@ public:
     int get_height() const;
     
     void diffuse_food ();
+    void diffuse_biomass ();
     void init_environment(
         float initial_food = simulation_config::field::default_initial_food
     );

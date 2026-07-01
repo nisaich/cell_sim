@@ -7,6 +7,7 @@ class Food;
 class Cell;
 
 class abstract_Biomass {  //основной класс клетки
+    friend class Field;
 protected:
     int age_of_cell = 0;
     int max_count_reps = simulation_config::biomass::max_count_reps;

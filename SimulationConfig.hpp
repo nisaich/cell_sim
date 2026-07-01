@@ -3,11 +3,11 @@
 namespace simulation_config {
 
 namespace field {
-inline constexpr int width = 50;
-inline constexpr int height = 50;
+inline constexpr int width = 20;
+inline constexpr int height = 20;
 inline constexpr float initial_food = 0.5f;
 inline constexpr float default_initial_food = 0.5f;
-inline constexpr float food_diffusion_coeff = 0.25f;  //не больше 25%
+inline constexpr float food_diffusion_coeff = 0.25f;  // Не больше 0.25 (математическое ограничение стабильности)
 }
 
 namespace colony {
@@ -17,24 +17,25 @@ inline constexpr int initial_cells_y_from_bottom = 1;
 }
 
 namespace biomass {
-inline constexpr int max_count_reps = 3;
-inline constexpr float initial_biomass = 0.01f;
-inline constexpr float default_max_food_consumed = 1 * initial_biomass;
-inline constexpr float food_usage_per_step = 0.001f * initial_biomass;
+inline constexpr int max_count_reps = 100;
+inline constexpr float initial_biomass = 0.5f; // Разделенная клетка
+inline constexpr float max_biomass = 1.0f; // Взрослая клетка (около 1 пг)
+inline constexpr float default_max_food_consumed = 0.0003f; // Скорость поедания (деление за ~30 мин)
+inline constexpr float food_usage_per_step = 0.00003f; // Траты на поддержание (около 10% от макс. еды)
 inline constexpr float food_usage_for_step = food_usage_per_step;
-inline constexpr int default_max_age = 300000;
+inline constexpr int default_max_age = 8640000; // 10 дней в тиках
 inline constexpr float default_resistance = 0.0f;
-inline constexpr float biomass_growth_per_eaten_unit = 0.1f;
-inline constexpr float reproduction_min_biomass = 1.0f;
-inline constexpr float reproduction_chance = 0.01f;
-inline constexpr float child_biomass_ratio = 0.5f;
-inline constexpr int steps_for_nonactivating = 10;
-inline constexpr int steps_to_live_forward = 2 * steps_for_nonactivating;
-inline constexpr float nonactive_resistance_multiplier = 1.5f;
-inline constexpr float nonactive_food_usage_multiplier = 0.25f;
-inline constexpr float nonactive_max_life_multiplier = 4.0f;
-inline constexpr float nonactive_biomass_loss_multiplier = 0.75f;
-inline constexpr int dead_steps_to_disappearance = 100;
+inline constexpr float biomass_growth_per_eaten_unit = 0.1f; // КПД усвоения еды
+inline constexpr float reproduction_min_biomass = 1.0f; // Деление только при массе 1.0
+inline constexpr float reproduction_chance = 0.1f; // Шанс деления 10% за тик (в среднем 1 секунда)
+inline constexpr float child_biomass_ratio = 0.5f; // 50/50 распределение при делении
+inline constexpr int steps_for_nonactivating = 36000; // 1 час голодания до спячки
+inline constexpr int steps_to_live_forward = 72000; // 2 часа голодания
+inline constexpr float nonactive_resistance_multiplier = 10.0f;
+inline constexpr float nonactive_food_usage_multiplier = 0.1f;
+inline constexpr float nonactive_max_life_multiplier = 10.0f;
+inline constexpr float nonactive_biomass_loss_multiplier = 0.1f;
+inline constexpr int dead_steps_to_disappearance = 36000; // 1 час на разложение
 }
 
 namespace graphs {
@@ -63,11 +64,28 @@ inline constexpr int modified_content_gap = 20;
 inline constexpr int target_fps = 0;
 inline constexpr float min_brightness = 0.35f;
 inline constexpr float brightness_span = 0.65f;
-inline constexpr float standard_nutrition_normalizer = 0.1f;
-inline constexpr float modified_nutrition_normalizer = 0.1f;
+inline constexpr float standard_nutrition_normalizer = 0.5f;
+inline constexpr float modified_nutrition_normalizer = 0.5f;
+
 inline constexpr unsigned char empty_cell_blue_r = 0;
 inline constexpr unsigned char empty_cell_blue_g = 100;
 inline constexpr unsigned char empty_cell_blue_b = 255;
+
+inline constexpr unsigned char empty_cell_r = 0;
+inline constexpr unsigned char empty_cell_g = 0;
+inline constexpr unsigned char empty_cell_b = 0;
+
+inline constexpr unsigned char active_cell_r = 0;
+inline constexpr unsigned char active_cell_g = 255;
+inline constexpr unsigned char active_cell_b = 0;
+
+inline constexpr unsigned char nonactive_cell_r = 255;
+inline constexpr unsigned char nonactive_cell_g = 255;
+inline constexpr unsigned char nonactive_cell_b = 0;
+
+inline constexpr unsigned char dead_cell_r = 255;
+inline constexpr unsigned char dead_cell_g = 0;
+inline constexpr unsigned char dead_cell_b = 0;
 }
 
 }  // namespace simulation_config

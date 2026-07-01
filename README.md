@@ -189,13 +189,13 @@
 ### Сборка с основной визуализацией
 
 ```bash
-g++ -std=c++17 Biomass.cpp Field.cpp Food.cpp Antibiotic.cpp Graphs.cpp main.cpp visualization.cpp -o simulation_last -lraylib
+g++ -std=c++17 -fopenmp Biomass.cpp Field.cpp Food.cpp Antibiotic.cpp Graphs.cpp main.cpp visualization.cpp -o simulation_last -lraylib
 ```
 
 ### Сборка с альтернативной визуализацией
 
 ```bash
-g++ -std=c++17 Biomass.cpp Field.cpp Food.cpp Antibiotic.cpp Graphs.cpp main.cpp visualization_modified.cpp -o simulation_test_mod -lraylib
+g++ -std=c++17 -fopenmp Biomass.cpp Field.cpp Food.cpp Antibiotic.cpp Graphs.cpp main.cpp visualization_modified.cpp -o simulation_test_mod -lraylib
 ```
 
 ## Запуск

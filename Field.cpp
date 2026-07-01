@@ -85,7 +85,7 @@ void Field::diffuse_food() {
     // временная матрица для новых значений
     std::vector<std::vector<float>> new_food(height, std::vector<float>(width, 0.0f));
 
-    
+    #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             float current = get_nucleus(x, y).get_food().get_amount();
@@ -102,6 +102,7 @@ void Field::diffuse_food() {
         }
     }
     // применение новых значений
+    #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             get_nucleus(x, y).get_food().set_amount(new_food[y][x]);

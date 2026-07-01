@@ -7,10 +7,10 @@ class Food;
 class Cell;
 
 class abstract_Biomass {  //основной класс клетки
+    friend class Field;
 protected:
     int age_of_cell = 0;
-
-//все данные параметры впоследствии необходимо будет менять(ну както подыскать реальные в природе)//
+    int max_count_reps = simulation_config::biomass::max_count_reps;
     float max_amount_of_food_consumed = simulation_config::biomass::default_max_food_consumed;
     int steps_for_nonactivating = simulation_config::biomass::steps_for_nonactivating;
     float biomass = simulation_config::biomass::initial_biomass;

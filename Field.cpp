@@ -85,7 +85,7 @@ void Field::diffuse_food() {
     // временная матрица для новых значений
     std::vector<std::vector<float>> new_food(height, std::vector<float>(width, 0.0f));
 
-    
+    #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             float current = get_nucleus(x, y).get_food().get_amount();
@@ -102,6 +102,7 @@ void Field::diffuse_food() {
         }
     }
     // применение новых значений
+    #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             get_nucleus(x, y).get_food().set_amount(new_food[y][x]);
@@ -109,6 +110,53 @@ void Field::diffuse_food() {
     }
 }
 //0.1 будет означать что растекаться со скоростью 10 процентов
+
+void Field::diffuse_biomass() {
+    // Временная матрица для новых значений биомассы
+    std::vector<std::vector<float>> new_biomass(height, std::vector<float>(width, 0.0f));
+
+    #pragma omp parallel for collapse(2) schedule(static)
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            std::shared_ptr<abstract_Biomass> cell = get_nucleus(x, y).get_cell();
+            // Диффузия происходит только если текущая клетка является активной биомассой
+            if (cell != nullptr && dynamic_cast<active_Biomass*>(cell.get()) != nullptr) {
+                float current = cell->get_biomass();
+                float sum_neighbors = 0.0f;
+                float num_active_neighbors = 0.0f;
+
+                for (Cell* nb : get_neighbours(x, y)) {
+                    std::shared_ptr<abstract_Biomass> nb_cell = nb->get_cell();
+                    // Рассматриваем только тех соседей, которые также являются активными клетками
+                    if (nb_cell != nullptr && dynamic_cast<active_Biomass*>(nb_cell.get()) != nullptr) {
+                        sum_neighbors += nb_cell->get_biomass();
+                        num_active_neighbors += 1.0f;
+                    }
+                }
+
+                float new_val = current;
+                if (num_active_neighbors > 0.0f) {
+                    new_val = current + simulation_config::field::biomass_diffusion_coeff *
+                        (sum_neighbors - num_active_neighbors * current);
+                }
+
+                if (new_val < 0.0f) new_val = 0.0f;
+                new_biomass[y][x] = new_val;
+            }
+        }
+    }
+
+    // Применение новых значений биомассы напрямую через дружественный доступ Field
+    #pragma omp parallel for collapse(2) schedule(static)
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            std::shared_ptr<abstract_Biomass> cell = get_nucleus(x, y).get_cell();
+            if (cell != nullptr && dynamic_cast<active_Biomass*>(cell.get()) != nullptr) {
+                cell->biomass = new_biomass[y][x];
+            }
+        }
+    }
+}
 
 
 bool Field::is_x_inside(int x) const {
@@ -200,6 +248,7 @@ bool Field::has_living_cells() const {
 }
 
 void Field::process_dead_cells_disappearance() {
+    #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             Cell& nucleus = get_nucleus(x, y);
@@ -225,20 +274,32 @@ void Field::process_dead_cells_disappearance() {
 void Field::make_one_step(int number_of_step) {
   if (number_of_step % simulation_config::visualization::number_of_step_to_diffuse == 0){
     diffuse_food();
+    diffuse_biomass();
   }
   std::vector<std::pair<int, int>> cells_for_this_step;
 
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            std::shared_ptr<abstract_Biomass> cell = field[y][x].get_cell();
+  #pragma omp parallel
+  {
+      std::vector<std::pair<int, int>> local_cells;
+      #pragma omp for collapse(2) schedule(static)
+      for (int y = 0; y < height; ++y) {
+          for (int x = 0; x < width; ++x) {
+              std::shared_ptr<abstract_Biomass> cell = field[y][x].get_cell();
 
-            if (cell != nullptr && cell->is_alive()) {
-                cells_for_this_step.emplace_back(x, y);
-            }
-        }
-    }
+              if (cell != nullptr && cell->is_alive()) {
+                  local_cells.emplace_back(x, y);
+              }
+          }
+      }
+      #pragma omp critical
+      {
+          cells_for_this_step.insert(cells_for_this_step.end(), local_cells.begin(), local_cells.end());
+      }
+  }
 
-    for (const auto& position : cells_for_this_step) {
+    #pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < cells_for_this_step.size(); ++i) {
+        const auto& position = cells_for_this_step[i];
         Cell& nucleus = get_nucleus(position.first, position.second);
         std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
@@ -253,7 +314,9 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
-    for (const auto& position : cells_for_this_step) {
+    #pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < cells_for_this_step.size(); ++i) {
+        const auto& position = cells_for_this_step[i];
         Cell& nucleus = get_nucleus(position.first, position.second);
         std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
@@ -262,10 +325,11 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
-    for (const auto& position : cells_for_this_step) {
+    #pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < cells_for_this_step.size(); ++i) {
+        const auto& position = cells_for_this_step[i];
         Cell& nucleus = get_nucleus(position.first, position.second);
-        std::shared_ptr<abstract_Biomass> cell =
-            nucleus.get_cell();
+        std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
         if (cell != nullptr && cell->is_alive()) {
             cell->set_nucleus(&nucleus);
@@ -273,6 +337,7 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
+    // Reproduction loop must be sequential to avoid race conditions when placing cells
     for (const auto& position : cells_for_this_step) {
         std::shared_ptr<abstract_Biomass> cell =
             get_nucleus(position.first, position.second).get_cell();

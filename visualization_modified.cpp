@@ -113,19 +113,44 @@ protected:
     Color getBaseColor() const {
         switch (state_nucleus) {
             case 0:
-                return Color{0, 0, 0, 255};
+                return Color{
+                    simulation_config::visualization::empty_cell_r,
+                    simulation_config::visualization::empty_cell_g,
+                    simulation_config::visualization::empty_cell_b,
+                    255
+                };
 
             case 1:
-                return Color{0, 255, 0, 255};
+                return Color{
+                    simulation_config::visualization::active_cell_r,
+                    simulation_config::visualization::active_cell_g,
+                    simulation_config::visualization::active_cell_b,
+                    255
+                };
 
             case 2:
-                return Color{255, 255, 0, 255};
+                return Color{
+                    simulation_config::visualization::nonactive_cell_r,
+                    simulation_config::visualization::nonactive_cell_g,
+                    simulation_config::visualization::nonactive_cell_b,
+                    255
+                };
 
             case 3:
-                return Color{255, 0, 0, 255};
+                return Color{
+                    simulation_config::visualization::dead_cell_r,
+                    simulation_config::visualization::dead_cell_g,
+                    simulation_config::visualization::dead_cell_b,
+                    255
+                };
 
             default:
-                return Color{0, 0, 0, 255};
+                return Color{
+                    simulation_config::visualization::empty_cell_r,
+                    simulation_config::visualization::empty_cell_g,
+                    simulation_config::visualization::empty_cell_b,
+                    255
+                };
         }
     }
 
@@ -245,9 +270,14 @@ public:
         return getBaseColor();
       }
 
-      // Живая клетка — зелёная/жёлтая, яркость по еде
+      // Живая клетка — зелёная/жёлтая, яркость по биомассе
+      float biomass_ratio = std::clamp(
+          cell->get_biomass() / simulation_config::biomass::reproduction_min_biomass,
+          0.0f,
+          1.0f
+      );
       float brightness = simulation_config::visualization::min_brightness +
-          nutrition * simulation_config::visualization::brightness_span;
+          biomass_ratio * simulation_config::visualization::brightness_span;
       return applyBrightness(getBaseColor(), brightness);
     }
 };

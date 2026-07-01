@@ -113,19 +113,44 @@ protected:
     Color getBaseColor() const {
         switch (state_nucleus) {
             case 0:
-                return Color{0, 0, 0, 255};
+                return Color{
+                    simulation_config::visualization::empty_cell_r,
+                    simulation_config::visualization::empty_cell_g,
+                    simulation_config::visualization::empty_cell_b,
+                    255
+                };
 
             case 1:
-                return Color{0, 255, 0, 255};
+                return Color{
+                    simulation_config::visualization::active_cell_r,
+                    simulation_config::visualization::active_cell_g,
+                    simulation_config::visualization::active_cell_b,
+                    255
+                };
 
             case 2:
-                return Color{255, 255, 0, 255};
+                return Color{
+                    simulation_config::visualization::nonactive_cell_r,
+                    simulation_config::visualization::nonactive_cell_g,
+                    simulation_config::visualization::nonactive_cell_b,
+                    255
+                };
 
             case 3:
-                return Color{255, 0, 0, 255};
+                return Color{
+                    simulation_config::visualization::dead_cell_r,
+                    simulation_config::visualization::dead_cell_g,
+                    simulation_config::visualization::dead_cell_b,
+                    255
+                };
 
             default:
-                return Color{0, 0, 0, 255};
+                return Color{
+                    simulation_config::visualization::empty_cell_r,
+                    simulation_config::visualization::empty_cell_g,
+                    simulation_config::visualization::empty_cell_b,
+                    255
+                };
         }
     }
 

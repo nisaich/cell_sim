@@ -3,11 +3,11 @@
 namespace simulation_config {
 
 namespace field {
-inline constexpr int width = 50;
-inline constexpr int height = 50;
+inline constexpr int width = 20;
+inline constexpr int height = 20;
 inline constexpr float initial_food = 0.5f;
 inline constexpr float default_initial_food = 0.5f;
-inline constexpr float food_diffusion_coeff = 0.25f;  //не больше 25%
+inline constexpr float food_diffusion_coeff = 0.25f;  // Не больше 0.25 (математическое ограничение стабильности)
 }
 
 namespace colony {
@@ -64,11 +64,28 @@ inline constexpr int modified_content_gap = 20;
 inline constexpr int target_fps = 0;
 inline constexpr float min_brightness = 0.35f;
 inline constexpr float brightness_span = 0.65f;
-inline constexpr float standard_nutrition_normalizer = 0.1f;
-inline constexpr float modified_nutrition_normalizer = 0.1f;
+inline constexpr float standard_nutrition_normalizer = 0.5f;
+inline constexpr float modified_nutrition_normalizer = 0.5f;
+
 inline constexpr unsigned char empty_cell_blue_r = 0;
 inline constexpr unsigned char empty_cell_blue_g = 100;
 inline constexpr unsigned char empty_cell_blue_b = 255;
+
+inline constexpr unsigned char empty_cell_r = 0;
+inline constexpr unsigned char empty_cell_g = 0;
+inline constexpr unsigned char empty_cell_b = 0;
+
+inline constexpr unsigned char active_cell_r = 0;
+inline constexpr unsigned char active_cell_g = 255;
+inline constexpr unsigned char active_cell_b = 0;
+
+inline constexpr unsigned char nonactive_cell_r = 255;
+inline constexpr unsigned char nonactive_cell_g = 255;
+inline constexpr unsigned char nonactive_cell_b = 0;
+
+inline constexpr unsigned char dead_cell_r = 255;
+inline constexpr unsigned char dead_cell_g = 0;
+inline constexpr unsigned char dead_cell_b = 0;
 }
 
 }  // namespace simulation_config

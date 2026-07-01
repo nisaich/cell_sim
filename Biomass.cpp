@@ -53,7 +53,7 @@ bool abstract_Biomass::should_be_removed_from_field() const {
 
 void abstract_Biomass::food_consumption_from_environment(Food& food) {
     float wanted_food = std::min(food.get_amount(), static_cast<float>(max_amount_of_food_consumed));
-    if (wanted_food > 0.0f) {
+    if (wanted_food > 0.0f && biomass < simulation_config::biomass::max_biomass) {
         float eaten = food.take(wanted_food);
         biomass += eaten;
     }

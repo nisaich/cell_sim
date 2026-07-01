@@ -5,10 +5,10 @@ namespace simulation_config {
 namespace field {
 inline constexpr int width = 200;
 inline constexpr int height = 200;
-inline constexpr float initial_food = 0.5f;
-inline constexpr float default_initial_food = 0.5f;
+inline constexpr float initial_food = 10.0f;
+inline constexpr float default_initial_food = 10.0f;
 inline constexpr float food_diffusion_coeff = 0.25f;  // Не больше 0.25 (математическое ограничение стабильности)
-inline constexpr float biomass_diffusion_coeff = 0.05f; // Коэффициент диффузии биомассы
+inline constexpr float biomass_diffusion_coeff = 0.2f; // Коэффициент диффузии биомассы
 }
 
 namespace colony {

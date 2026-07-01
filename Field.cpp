@@ -201,6 +201,7 @@ bool Field::has_living_cells() const {
 }
 
 void Field::process_dead_cells_disappearance() {
+    #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             Cell& nucleus = get_nucleus(x, y);
@@ -229,17 +230,28 @@ void Field::make_one_step(int number_of_step) {
   }
   std::vector<std::pair<int, int>> cells_for_this_step;
 
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            std::shared_ptr<abstract_Biomass> cell = field[y][x].get_cell();
+  #pragma omp parallel
+  {
+      std::vector<std::pair<int, int>> local_cells;
+      #pragma omp for collapse(2) schedule(static)
+      for (int y = 0; y < height; ++y) {
+          for (int x = 0; x < width; ++x) {
+              std::shared_ptr<abstract_Biomass> cell = field[y][x].get_cell();
 
-            if (cell != nullptr && cell->is_alive()) {
-                cells_for_this_step.emplace_back(x, y);
-            }
-        }
-    }
+              if (cell != nullptr && cell->is_alive()) {
+                  local_cells.emplace_back(x, y);
+              }
+          }
+      }
+      #pragma omp critical
+      {
+          cells_for_this_step.insert(cells_for_this_step.end(), local_cells.begin(), local_cells.end());
+      }
+  }
 
-    for (const auto& position : cells_for_this_step) {
+    #pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < cells_for_this_step.size(); ++i) {
+        const auto& position = cells_for_this_step[i];
         Cell& nucleus = get_nucleus(position.first, position.second);
         std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
@@ -254,7 +266,9 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
-    for (const auto& position : cells_for_this_step) {
+    #pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < cells_for_this_step.size(); ++i) {
+        const auto& position = cells_for_this_step[i];
         Cell& nucleus = get_nucleus(position.first, position.second);
         std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
@@ -263,10 +277,11 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
-    for (const auto& position : cells_for_this_step) {
+    #pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < cells_for_this_step.size(); ++i) {
+        const auto& position = cells_for_this_step[i];
         Cell& nucleus = get_nucleus(position.first, position.second);
-        std::shared_ptr<abstract_Biomass> cell =
-            nucleus.get_cell();
+        std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
         if (cell != nullptr && cell->is_alive()) {
             cell->set_nucleus(&nucleus);
@@ -274,6 +289,7 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
+    // Reproduction loop must be sequential to avoid race conditions when placing cells
     for (const auto& position : cells_for_this_step) {
         std::shared_ptr<abstract_Biomass> cell =
             get_nucleus(position.first, position.second).get_cell();

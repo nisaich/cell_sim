@@ -3,8 +3,8 @@
 namespace simulation_config {
 
 namespace field {
-inline constexpr int width = 200;
-inline constexpr int height = 200;
+inline constexpr int width = 100;
+inline constexpr int height = 100;
 inline constexpr float initial_food = 10.0f;
 inline constexpr float default_initial_food = 10.0f;
 inline constexpr float food_diffusion_coeff = 0.25f;  // Не больше 0.25 (математическое ограничение стабильности)
@@ -26,9 +26,9 @@ inline constexpr float food_usage_per_step = 0.0015f; // Траты на под�
 inline constexpr float food_usage_for_step = food_usage_per_step;
 inline constexpr int default_max_age = 10000; // Старение за 10000 тиков
 inline constexpr float default_resistance = 0.0f;
-inline constexpr float biomass_growth_per_eaten_unit = 0.1f; // КПД усвоения еды
+inline constexpr float biomass_growth_per_eaten_unit = 0.01f; // КПД усвоения еды
 inline constexpr float reproduction_min_biomass = 1.0f; // Деление только при массе 1.0
-inline constexpr float reproduction_chance = 0.2f; // Шанс деления 20% за тик
+inline constexpr float reproduction_chance = 0.002f; // Шанс деления 20% за тик
 inline constexpr float child_biomass_ratio = 0.5f; // 50/50 распределение при делении
 inline constexpr int steps_for_nonactivating = 800; // 800 тиков голодания до спячки
 inline constexpr int steps_to_live_forward = 1600; // 1600 тиков голодания до смерти

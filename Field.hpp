@@ -69,6 +69,9 @@ public:
     void init_environment(
         float initial_food = simulation_config::field::default_initial_food
     );
+    void add_some_food(
+        int count_of_adding_food = simulation_config::field::count_of_adding_food
+    );
 
     const std::vector<std::vector<Cell>>& get_field() const;
 

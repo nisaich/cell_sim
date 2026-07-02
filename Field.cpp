@@ -80,6 +80,14 @@ void Field::init_environment(float initial_food) {
     }
 }
 
+void Field::add_some_food(int count_of_adding_food) {
+  for (int x=0; x < width; x++) {
+    if (x == width/2) {
+      get_nucleus(x, 0).get_food().set_amount(count_of_adding_food);
+    }
+  }
+}
+
 
 void Field::diffuse_food() {
     // временная матрица для новых значений
@@ -120,7 +128,7 @@ void Field::diffuse_biomass() {
         for (int x = 0; x < width; ++x) {
             std::shared_ptr<abstract_Biomass> cell = get_nucleus(x, y).get_cell();
             // Диффузия происходит только если текущая клетка является активной биомассой
-            if (cell != nullptr && dynamic_cast<active_Biomass*>(cell.get()) != nullptr) {
+            if (cell != nullptr && dynamic_cast<dead_Biomass*>(cell.get()) == nullptr) {
                 float current = cell->get_biomass();
                 float sum_neighbors = 0.0f;
                 float num_active_neighbors = 0.0f;
@@ -128,7 +136,7 @@ void Field::diffuse_biomass() {
                 for (Cell* nb : get_neighbours(x, y)) {
                     std::shared_ptr<abstract_Biomass> nb_cell = nb->get_cell();
                     // Рассматриваем только тех соседей, которые также являются активными клетками
-                    if (nb_cell != nullptr && dynamic_cast<active_Biomass*>(nb_cell.get()) != nullptr) {
+                    if (nb_cell != nullptr && dynamic_cast<dead_Biomass*>(nb_cell.get()) == nullptr) {
                         sum_neighbors += nb_cell->get_biomass();
                         num_active_neighbors += 1.0f;
                     }
@@ -276,6 +284,11 @@ void Field::make_one_step(int number_of_step) {
     diffuse_food();
     diffuse_biomass();
   }
+
+  if (number_of_step % simulation_config::field::steps_for_adding_food == 0) {
+    add_some_food(simulation_config::field::count_of_adding_food);
+  }
+
   std::vector<std::pair<int, int>> cells_for_this_step;
 
   #pragma omp parallel
@@ -337,7 +350,6 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
-    // Reproduction loop must be sequential to avoid race conditions when placing cells
     for (const auto& position : cells_for_this_step) {
         std::shared_ptr<abstract_Biomass> cell =
             get_nucleus(position.first, position.second).get_cell();

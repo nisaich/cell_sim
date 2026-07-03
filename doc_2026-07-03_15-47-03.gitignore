@@ -1,0 +1,89 @@
+# Папки сборки
+build/
+build-*/
+_build/
+out/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+CMakeUserPresets.json
+*.cmake
+!CMakeLists.txt
+!*.cmake.in
+
+# Зависимости, скачанные через FetchContent
+_deps/
+*.download/
+*.populate/
+
+# Объектные и исполняемые файлы
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+
+# Файлы отладки / профилирования
+*.pdb
+*.ilk
+*.exp
+*.map
+
+# Временные файлы редакторов
+*.swp
+*.swo
+*~
+.*.swp
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+
+# Логи и отчеты
+*.log
+*.xml
+*.json
+*.out
+
+# Конфигурации, создаваемые IDE
+.vs/
+.vscode/
+.idea/
+cmake-build-*/
+Debug/
+Release/
+MinSizeRel/
+RelWithDebInfo/
+
+# Raylib (если вы собираете из исходников, не нужно хранить саму библиотеку)
+raylib-*/
+raylib-src/
+libraylib.a
+raylib.dll
+
+# Ваши личные файлы
+*.bak
+*.tmp
+*.temp
+
+# Игнорировать все в корне, кроме исходников и CMakeLists.txt
+!*.cpp
+!*.hpp
+!*.h
+!*.c
+!*.cc
+!CMakeLists.txt
+!*.md
+!LICENSE
+
+# Если используете Git для хранения конфигурационных файлов, можно исключить чувствительные данные
+*.secret
+*.key
+*.pem

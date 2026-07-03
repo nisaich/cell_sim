@@ -32,7 +32,7 @@ float abstract_Biomass::get_biomass() const {
 }
 
 bool abstract_Biomass::must_he_die(Food& food) const {
-    return age_of_cell >= max_age_of_cell || food.get_amount()<=using_food_for_step;
+    return age_of_cell >= max_age_of_cell || biomass <= 0.0f;
 }
 
 void abstract_Biomass::increase_age() {
@@ -53,18 +53,20 @@ bool abstract_Biomass::should_be_removed_from_field() const {
 
 void abstract_Biomass::food_consumption_from_environment(Food& food) {
     float wanted_food = std::min(food.get_amount(), static_cast<float>(max_amount_of_food_consumed));
-    if (wanted_food > 0.0f) {
+    if (wanted_food > 0.0f && biomass < simulation_config::biomass::max_biomass) {
         float eaten = food.take(wanted_food);
-        biomass += eaten * biomass * simulation_config::biomass::biomass_growth_per_eaten_unit;
+        biomass += eaten;
     }
 }
 
 void abstract_Biomass::depletion_of_savings(Food& food) {
     float available_food = food.get_amount();
-    if (steps_for_nonactivating != simulation_config::biomass::steps_for_nonactivating && steps_for_nonactivating != 0){
+    if (steps_for_nonactivating != simulation_config::biomass::steps_for_nonactivating && \
+        steps_for_nonactivating != 0){
       steps_for_nonactivating--;
     }
-    else if (available_food < steps_to_live_forward * using_food_for_step) {
+    else if (available_food < steps_to_live_forward * using_food_for_step && \
+        steps_for_nonactivating >0) {
       steps_for_nonactivating--;
     }
     else if(steps_for_nonactivating == 0){
@@ -72,9 +74,14 @@ void abstract_Biomass::depletion_of_savings(Food& food) {
       copy_common_state_to(*nonactive_cell);
       nucleus->set_cell(nonactive_cell);
       steps_for_nonactivating= simulation_config::biomass::steps_for_nonactivating;
+      return;
     }
 
-    food.take(using_food_for_step);
+    float eaten = food.take(using_food_for_step);
+    float deficit = using_food_for_step - eaten;
+    if (deficit > 0.0f) {
+        biomass = std::max(0.0f, biomass - deficit);
+    }
 }
 
 bool abstract_Biomass::reproduction(Field& current_field, int x, int y) {
@@ -92,7 +99,9 @@ bool active_Biomass::is_alive() const {
 
 bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     std::vector<Cell*> free_neighbours = current_field.get_free_neighbours(x, y);
-
+    if (max_count_reps == 0) {
+      return false;
+    }
     if (free_neighbours.empty()) {
       return false;
     }
@@ -111,15 +120,28 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
       return false;
     }
 
+    // Выбираем соседа с наибольшим количеством еды (направленный рост)
+    float max_food = -1.0f;
+    for (Cell* nb : free_neighbours) {
+        max_food = std::max(max_food, nb->get_food().get_amount());
+    }
+
+    std::vector<Cell*> best_neighbours;
+    for (Cell* nb : free_neighbours) {
+        if (std::abs(nb->get_food().get_amount() - max_food) < 1e-5f) {
+            best_neighbours.push_back(nb);
+        }
+    }
+
     std::uniform_int_distribution<std::size_t> distribution(
         0,
-        free_neighbours.size() - 1
+        best_neighbours.size() - 1
     );
 
-    Cell* place_for_child = free_neighbours[distribution(generator)];
+    Cell* place_for_child = best_neighbours[distribution(generator)];
 
     float child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
-    biomass = child_biomass;
+    biomass = biomass - child_biomass;
     auto child = std::make_shared<active_Biomass>(
       level_of_resistance,
       max_age_of_cell
@@ -168,7 +190,7 @@ bool nonactive_Biomass::reproduction(Field& current_field, int x, int y) {
     if (nucleus.get_food().get_amount() < steps_to_live_forward * food_now) {
         return false;
     }
-    else if (steps_for_nonactivating == simulation_config::biomass::steps_for_nonactivating) {
+    else if (steps_for_nonactivating > 0) {
       steps_for_nonactivating--;
     }
     else if (steps_for_nonactivating == 0){

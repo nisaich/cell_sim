@@ -14,15 +14,12 @@ class abstract_Biomass;
 class Cell {
 private:
     std::shared_ptr<abstract_Biomass> cell = nullptr;
-
-    std::array<int, 2> cell_coordinates{0, 0};
-
+    std::array<int, 2> cell_coordinates{ 0, 0 };
     Food food;
     Antibiotic antibiotic;
 
 public:
     Cell() = default;
-
     Cell(
         int x,
         int y,
@@ -50,7 +47,6 @@ class Field {
 private:
     int width;
     int height;
-
     std::vector<std::vector<Cell>> field;
 
     void process_dead_cells_disappearance();
@@ -63,14 +59,21 @@ public:
 
     int get_width() const;
     int get_height() const;
-    
-    void diffuse_food ();
-    void diffuse_biomass ();
+
+    void diffuse_food();
+    void diffuse_biomass();
+    void diffuse_antibiotic();   // новый метод
+
     void init_environment(
         float initial_food = simulation_config::field::default_initial_food
     );
     void add_some_food(
         int count_of_adding_food = simulation_config::field::count_of_adding_food
+    );
+    void add_antibiotic(          // новый метод
+        float concentration,
+        int x,
+        int y
     );
 
     const std::vector<std::vector<Cell>>& get_field() const;

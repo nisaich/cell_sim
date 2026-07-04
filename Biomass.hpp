@@ -5,8 +5,9 @@
 class Field;
 class Food;
 class Cell;
+class Antibiotic;
 
-class abstract_Biomass {  //основной класс клетки
+class abstract_Biomass {
     friend class Field;
 protected:
     int age_of_cell = 0;
@@ -29,7 +30,8 @@ public:
     float get_level_of_resistance() const;
     float get_biomass() const;
 
-    bool must_he_die(Food& food) const;
+    // Теперь must_he_die принимает антибиотик
+    bool must_he_die(Food& food, const Antibiotic& antibiotic) const;
     void increase_age();
     void set_nucleus(Cell* current_nucleus);
 
@@ -38,7 +40,7 @@ public:
     virtual bool is_alive() const = 0;
 
     virtual bool reproduction(Field& current_field, int x, int y);
-    
+
     virtual void depletion_of_savings(Food& food);
     virtual void step_after_death();
     virtual bool should_be_removed_from_field() const;
@@ -51,17 +53,16 @@ public:
 
     bool is_alive() const override;
     bool reproduction(Field& current_field, int x, int y) override;
+    void depletion_of_savings(Food& food) override; // добавим для перехода в неактивное состояние
 };
 
 class nonactive_Biomass : public abstract_Biomass {
-private:  
-//неактивные клетки потребляют меньшее кол-во питания и имеют повышенный резист к антибиотику
+private:
     float resistance_multiplier = simulation_config::biomass::nonactive_resistance_multiplier;
     float food_usage_multiplier = simulation_config::biomass::nonactive_food_usage_multiplier;
     float max_life_multiplier = simulation_config::biomass::nonactive_max_life_multiplier;
 public:
-    nonactive_Biomass()=default;
-
+    nonactive_Biomass() = default;
     nonactive_Biomass(
         float resistance,
         int max_age,
@@ -69,25 +70,18 @@ public:
         float food_usage
     );
 
-    bool is_alive() const override {
-      return true;
-    }
-    
+    bool is_alive() const override { return true; }
     void depletion_of_savings(Food& food) override;
-
     bool reproduction(Field& current_field, int x, int y) override;
 };
 
 class dead_Biomass : public abstract_Biomass {
 private:
     int count_of_steps_to_disappearance = simulation_config::biomass::dead_steps_to_disappearance;
-
 public:
     int count_of_steps_from_death = 0;
-
     void step_after_death() override;
     bool should_be_removed_from_field() const override;
-
     bool is_it_still_there() const;
     bool is_alive() const override;
 };

@@ -176,6 +176,11 @@ void Field::diffuse_antibiotic() {
             float num_neighbors = static_cast<float>(get_neighbours(x, y).size());
             float new_val = current + simulation_config::antibiotic::diffusion_coeff *
                 (sum_neighbors - num_neighbors * current);
+
+            // Естественное разложение антибиотика (клиренс), иначе он бы
+            // накапливался в поле бесконечно с каждым новым импульсом.
+            new_val *= (1.0f - simulation_config::antibiotic::decay_rate);
+
             if (new_val < 0.0f) new_val = 0.0f;
             new_antibiotic[y][x] = new_val;
         }

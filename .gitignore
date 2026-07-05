@@ -1,0 +1,12 @@
+﻿build/
+_deps/
+*.exe
+*.o
+*.obj
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+simulation_stats.csv
+*.log
+*.tmp

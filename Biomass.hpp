@@ -73,6 +73,16 @@ public:
     bool is_alive() const override { return true; }
     void depletion_of_savings(Food& food) override;
     bool reproduction(Field& current_field, int x, int y) override;
+
+    // Применяет коэффициенты дормантности (устойчивость/возраст/расход пищи)
+    // к уже скопированному общему состоянию клетки. Вызывается сразу после
+    // copy_common_state_to при переходе active -> nonactive.
+    void apply_dormancy_effects();
+
+    // Обратные величины для восстановления "обычных" параметров клетки
+    // при переходе nonactive -> active.
+    float baseline_resistance() const;
+    int baseline_max_age() const;
 };
 
 class dead_Biomass : public abstract_Biomass {

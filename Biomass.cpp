@@ -84,6 +84,7 @@ void abstract_Biomass::depletion_of_savings(Food& food) {
     else if (steps_for_nonactivating == 0) {
         auto nonactive_cell = std::make_shared<nonactive_Biomass>();
         copy_common_state_to(*nonactive_cell);
+        nonactive_cell->apply_dormancy_effects();
         nucleus->set_cell(nonactive_cell);
         steps_for_nonactivating = simulation_config::biomass::steps_for_nonactivating;
         return;
@@ -125,7 +126,7 @@ void active_Biomass::depletion_of_savings(Food& food) {
             if (dist(gen) < chance) {
                 auto nonactive = std::make_shared<nonactive_Biomass>();
                 copy_common_state_to(*nonactive);
-                nonactive->level_of_resistance = level_of_resistance * 1.5f;
+                nonactive->apply_dormancy_effects();
                 nucleus->set_cell(nonactive);
                 return;
             }
@@ -175,8 +176,19 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
 
     float child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
     biomass = biomass - child_biomass;
+
+    // ----- НОВАЯ ЛОГИКА: мутация резистентности -----
+    // Генерируем небольшое случайное изменение (от -0.05 до +0.05)
+    std::uniform_real_distribution<float> mutation_dist(-0.05f, 0.05f);
+    float mutation = mutation_dist(generator);
+    float child_resistance = level_of_resistance + mutation;
+    // Ограничиваем, чтобы не выходить за разумные пределы (0..1)
+    if (child_resistance < 0.0f) child_resistance = 0.0f;
+    if (child_resistance > 1.0f) child_resistance = 1.0f;
+    // ------------------------------------------------
+
     auto child = std::make_shared<active_Biomass>(
-        level_of_resistance,
+        child_resistance,     // теперь с мутацией
         max_age_of_cell
     );
     child->biomass = child_biomass;
@@ -198,6 +210,22 @@ nonactive_Biomass::nonactive_Biomass(
     max_age_of_cell = static_cast<int>(max_age * max_life_multiplier);
     max_amount_of_food_consumed = max_food_consumed;
     using_food_for_step = food_usage * food_usage_multiplier;
+}
+
+void nonactive_Biomass::apply_dormancy_effects() {
+    level_of_resistance *= resistance_multiplier;
+    max_age_of_cell = static_cast<int>(max_age_of_cell * max_life_multiplier);
+    using_food_for_step *= food_usage_multiplier;
+}
+
+float nonactive_Biomass::baseline_resistance() const {
+    if (resistance_multiplier <= 0.0f) return level_of_resistance;
+    return level_of_resistance / resistance_multiplier;
+}
+
+int nonactive_Biomass::baseline_max_age() const {
+    if (max_life_multiplier <= 0.0f) return max_age_of_cell;
+    return static_cast<int>(max_age_of_cell / max_life_multiplier);
 }
 
 void nonactive_Biomass::depletion_of_savings(Food& food) {
@@ -225,6 +253,9 @@ bool nonactive_Biomass::reproduction(Field& current_field, int x, int y) {
     else if (steps_for_nonactivating == 0) {
         auto active_cell = std::make_shared<active_Biomass>();
         copy_common_state_to(*active_cell);
+        // Возвращаем базовые (немодифицированные дормантностью) параметры.
+        active_cell->level_of_resistance = baseline_resistance();
+        active_cell->max_age_of_cell = baseline_max_age();
         nucleus.set_cell(active_cell);
     }
     return false;

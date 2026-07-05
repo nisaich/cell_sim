@@ -334,7 +334,11 @@ protected:
             0.0f,
             1.0f
         );
-        float antibiotic = std::clamp(antibioticInEnvironment, 0.0f, 10.0f); // ограничим для визуализации
+        float antibiotic = std::clamp(
+            antibioticInEnvironment,
+            0.0f,
+            simulation_config::antibiotic::visualization_normalizer
+        );
 
         float resistance = 0.0f;
         if (cell != nullptr) {
@@ -378,6 +382,30 @@ static CellColorMode getColorModeFromText(const std::string& colorMode) {
         return CellColorMode::Antibiotic;
     }
     return CellColorMode::Age;
+}
+
+static void drawAntibioticLegend(int x, int y) {
+    const int barWidth = simulation_config::visualization::legend_width;
+    const int barHeight = simulation_config::visualization::legend_height;
+    const int fontSize = simulation_config::visualization::legend_font_size;
+
+    // Полупрозрачная подложка, чтобы легенда читалась над полем любого цвета
+    DrawRectangle(x - 6, y - 6, barWidth + 90, barHeight + 20, Color{ 255, 255, 255, 180 });
+
+    // Градиент "чёрный (0) -> синий (max)", как у пустых клеток в этом режиме
+    for (int i = 0; i < barHeight; ++i) {
+        float t = 1.0f - static_cast<float>(i) / static_cast<float>(barHeight - 1);
+        unsigned char intensity = static_cast<unsigned char>(t * 255);
+        DrawRectangle(x, y + i, barWidth, 1, Color{ 0, 0, intensity, 255 });
+    }
+    DrawRectangleLines(x, y, barWidth, barHeight, GRAY);
+
+    DrawText(
+        TextFormat("%.0f", simulation_config::antibiotic::visualization_normalizer),
+        x + barWidth + 6, y - 2, fontSize, DARKGRAY
+    );
+    DrawText("0", x + barWidth + 6, y + barHeight - fontSize + 2, fontSize, DARKGRAY);
+    DrawText("Antibiotic", x, y + barHeight + 4, fontSize, DARKGRAY);
 }
 
 static float calculateBiomassSize(
@@ -476,6 +504,14 @@ void visualize(
             startX,
             startY
         );
+
+        if (mode == CellColorMode::Antibiotic) {
+            drawAntibioticLegend(
+                simulation_config::visualization::legend_x,
+                simulation_config::visualization::legend_y
+            );
+        }
+
         statsHistory.draw(
             static_cast<int>(width * cellSize + contentGap),
             0,

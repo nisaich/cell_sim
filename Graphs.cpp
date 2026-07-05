@@ -111,7 +111,7 @@ void drawSeries(
 CsvStatsRecorder::CsvStatsRecorder(const std::string& path)
     : csv(path) {
     if (csv.is_open()) {
-        csv << "tick,liveCells,deadCells,emptyCells,avgFood,totalFood,maxHeight\n";
+        csv << "tick,liveCells,deadCells,emptyCells,avgFood,totalFood,maxHeight,avgAntibiotic,maxAntibiotic\n";
     }
 }
 
@@ -132,7 +132,9 @@ void CsvStatsRecorder::record(const Field& field, int tick) {
         << stats.emptyCells << ","
         << stats.avgFood << ","
         << stats.totalFood << ","
-        << stats.maxHeight << "\n";
+        << stats.maxHeight << ","
+        << stats.avgAntibiotic << ","
+        << stats.maxAntibiotic << "\n";
 }
 
 SimulationStats collectStats(const Field& field, int tick) {
@@ -160,11 +162,18 @@ SimulationStats collectStats(const Field& field, int tick) {
             }
 
             stats.totalFood += nucleus.get_food().get_amount();
+
+            const float antibiotic = nucleus.get_antibiotic().get_concentration();
+            stats.avgAntibiotic += antibiotic;
+            if (antibiotic > stats.maxAntibiotic) {
+                stats.maxAntibiotic = antibiotic;
+            }
         }
     }
 
     if (totalCells > 0) {
         stats.avgFood = stats.totalFood / totalCells;
+        stats.avgAntibiotic /= totalCells;
     }
 
     return stats;
@@ -223,18 +232,29 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
         simulation_config::graphs::text_font_size,
         DARKGRAY
     );
+    DrawText(
+        TextFormat("Antibiotic avg: %.2f  max: %.2f", latest.avgAntibiotic, latest.maxAntibiotic),
+        x + simulation_config::graphs::panel_padding,
+        y + 78,
+        simulation_config::graphs::text_font_size,
+        DARKBLUE
+    );
 
     std::vector<float> liveCells;
     std::vector<float> deadCells;
     std::vector<float> totalFood;
     std::vector<float> avgFood;
     std::vector<float> maxHeight;
+    std::vector<float> avgAntibiotic;
+    std::vector<float> maxAntibiotic;
 
     liveCells.reserve(history.size());
     deadCells.reserve(history.size());
     totalFood.reserve(history.size());
     avgFood.reserve(history.size());
     maxHeight.reserve(history.size());
+    avgAntibiotic.reserve(history.size());
+    maxAntibiotic.reserve(history.size());
 
     for (const SimulationStats& stats : history) {
         liveCells.push_back(static_cast<float>(stats.liveCells));
@@ -242,12 +262,14 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
         totalFood.push_back(stats.totalFood);
         avgFood.push_back(stats.avgFood);
         maxHeight.push_back(static_cast<float>(stats.maxHeight));
+        avgAntibiotic.push_back(stats.avgAntibiotic);
+        maxAntibiotic.push_back(stats.maxAntibiotic);
     }
 
     const int chartsTop = y + simulation_config::graphs::header_bottom;
     const int chartsHeight = height - simulation_config::graphs::header_bottom -
         simulation_config::graphs::panel_padding;
-    const int chartHeight = (chartsHeight - 3 * simulation_config::graphs::section_gap) / 4;
+    const int chartHeight = (chartsHeight - 4 * simulation_config::graphs::section_gap) / 5;
     const int chartWidth = width - 2 * simulation_config::graphs::panel_padding;
 
     drawSeries(
@@ -304,5 +326,22 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
         maxHeight,
         BLUE,
         "Max height"
+    );
+    drawSeries(
+        history,
+        Rectangle{
+            static_cast<float>(x + simulation_config::graphs::panel_padding),
+            static_cast<float>(
+                chartsTop + 4 * (chartHeight + simulation_config::graphs::section_gap)
+            ),
+            static_cast<float>(chartWidth),
+            static_cast<float>(chartHeight)
+        },
+        avgAntibiotic,
+        DARKBLUE,
+        "Avg antibiotic",
+        &maxAntibiotic,
+        VIOLET,
+        "Max antibiotic"
     );
 }

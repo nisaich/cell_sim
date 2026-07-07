@@ -76,13 +76,18 @@ void drawSeries(
     DrawLine(left, top, left, bottom, GRAY);
 
     auto drawLineForValues = [&](const std::vector<float>& values, Color color) {
-        for (size_t i = 1; i < values.size(); ++i) {
-            const float prevX = left + graphWidth * static_cast<float>(i - 1) /
+        size_t step = std::max<size_t>(1, values.size() / static_cast<size_t>(graphWidth));
+        size_t prev_idx = 0;
+        for (size_t i = step; i < values.size(); i += step) {
+            if (i + step >= values.size()) {
+                i = values.size() - 1; // ensure we draw the last point
+            }
+            const float prevX = left + graphWidth * static_cast<float>(prev_idx) /
                 static_cast<float>(values.size() - 1);
             const float nextX = left + graphWidth * static_cast<float>(i) /
                 static_cast<float>(values.size() - 1);
 
-            const float prevY = bottom - graphHeight * (values[i - 1] - minValue) /
+            const float prevY = bottom - graphHeight * (values[prev_idx] - minValue) /
                 (maxValue - minValue);
             const float nextY = bottom - graphHeight * (values[i] - minValue) /
                 (maxValue - minValue);
@@ -93,6 +98,9 @@ void drawSeries(
                 simulation_config::graphs::chart_line_thickness,
                 color
             );
+            prev_idx = i;
+            
+            if (i == values.size() - 1) break;
         }
     };
 

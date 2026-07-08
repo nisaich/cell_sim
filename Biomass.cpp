@@ -15,10 +15,9 @@ int abstract_Biomass::get_age() const {
 void abstract_Biomass::copy_common_state_to(abstract_Biomass& other) const {
     other.age_of_cell = age_of_cell;
     other.biomass = biomass;
-    other.max_amount_of_food_consumed = max_amount_of_food_consumed;
-    other.using_food_for_step = using_food_for_step;
     other.max_age_of_cell = max_age_of_cell;
     other.level_of_resistance = level_of_resistance;
+    other.nucleus = nucleus;
 }
 
 float abstract_Biomass::get_level_of_resistance() const {
@@ -173,8 +172,6 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
         max_age_of_cell
     );
     child->biomass = child_biomass;
-    child->max_amount_of_food_consumed = max_amount_of_food_consumed;
-    child->using_food_for_step = using_food_for_step;
 
     place_for_child->set_cell(child);
     return true;
@@ -183,20 +180,15 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
 // ---------- nonactive_Biomass ----------
 nonactive_Biomass::nonactive_Biomass(
     float resistance,
-    int max_age,
-    float max_food_consumed,
-    float food_usage
+    int max_age
 ) {
     level_of_resistance = resistance * resistance_multiplier;
     max_age_of_cell = static_cast<int>(max_age * max_life_multiplier);
-    max_amount_of_food_consumed = max_food_consumed;
-    using_food_for_step = food_usage * food_usage_multiplier;
 }
 
 void nonactive_Biomass::apply_dormancy_effects() {
     level_of_resistance *= resistance_multiplier;
     max_age_of_cell = static_cast<int>(max_age_of_cell * max_life_multiplier);
-    using_food_for_step *= food_usage_multiplier;
 }
 
 float nonactive_Biomass::baseline_resistance() const {
@@ -212,15 +204,9 @@ int nonactive_Biomass::baseline_max_age() const {
 // depletion_of_savings удалён, используется consume_and_decay из abstract_Biomass
 
 bool nonactive_Biomass::reproduction(Field& current_field, int x, int y) {
-    const float food_now = simulation_config::biomass::food_usage_for_step;
     Cell& nucleus = current_field.get_nucleus(x, y);
-    if (nucleus.get_food().get_amount() < steps_to_live_forward * food_now) {
-        return false;
-    }
-    else if (steps_for_nonactivating > 0) {
-        steps_for_nonactivating--;
-    }
-    else if (steps_for_nonactivating == 0) {
+    // Пробуждение, если еды достаточно для эффективного питания
+    if (nucleus.get_food().get_amount() > simulation_config::monod::K_F) {
         auto active_cell = std::make_shared<active_Biomass>();
         copy_common_state_to(*active_cell);
         // Возвращаем базовые (немодифицированные дормантностью) параметры.

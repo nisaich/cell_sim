@@ -23,21 +23,13 @@ namespace simulation_config {
         inline constexpr int max_count_reps = 10000;
         inline constexpr float initial_biomass = 0.5f;
         inline constexpr float max_biomass = 2.0f;
-        inline constexpr float default_max_food_consumed = 5.0f;
-        inline constexpr float food_usage_per_step = 0.0015f;
-        inline constexpr float food_usage_for_step = food_usage_per_step;
         inline constexpr int default_max_age = 10000000;
         inline constexpr float default_resistance = 0.0f;
-        inline constexpr float biomass_growth_per_eaten_unit = 0.1f;
         inline constexpr float reproduction_min_biomass = 1.0f;
         inline constexpr float reproduction_chance = 0.02f;
         inline constexpr float child_biomass_ratio = 0.5f;
-        inline constexpr int steps_for_nonactivating = 50;
-        inline constexpr int steps_to_live_forward = 100;
         inline constexpr float nonactive_resistance_multiplier = 2.0f;
-        inline constexpr float nonactive_food_usage_multiplier = 0.5f;
         inline constexpr float nonactive_max_life_multiplier = 100.0f;
-        inline constexpr float nonactive_biomass_loss_multiplier = 0.0001f;
         inline constexpr int dead_steps_to_disappearance = 10000;
     }
 

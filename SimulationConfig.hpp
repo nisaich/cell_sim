@@ -47,12 +47,13 @@ namespace simulation_config {
     }
 
     namespace monod {
-        inline constexpr float U_max = 0.185f;
+        // Values converted from hour^-1 to second^-1 (divided by 3600)
+        inline constexpr float U_max = 5.14e-5f;      // 0.185 h^-1
         inline constexpr float K_F = 33.3f;
         inline constexpr float delta_t = 0.1f;
         inline constexpr float Y_B_F = 0.52f;
-        inline constexpr float m_act = 0.074f;
-        inline constexpr float m_inactiv = 0.00074f; // 0.74 * 10^-3
+        inline constexpr float m_act = 2.056e-5f;     // 0.074 h^-1
+        inline constexpr float m_inactiv = 2.056e-7f; // 0.00074 h^-1
         inline constexpr float starvation_biomass_threshold = 0.2f;
         inline constexpr float greed_coefficient = 1.5f;
         inline constexpr int steps_for_waking_up = 50;

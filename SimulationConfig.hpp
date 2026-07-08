@@ -3,47 +3,41 @@
 namespace simulation_config {
 
     namespace field {
-        inline constexpr int width = 100;
-        inline constexpr int height = 100;
-        inline constexpr float initial_food = 0.60f;
+        inline constexpr int width = 200;
+        inline constexpr int height = 200;
+        inline constexpr float initial_food = 2.0f;           // умеренно
         inline constexpr float default_initial_food = 0.0f;
-        inline constexpr float food_diffusion_coeff = 0.25f;
-        inline constexpr float biomass_diffusion_coeff = 0.25f;
-        inline constexpr int steps_for_adding_food = 1000;
-        inline constexpr int count_of_adding_food = 10000;
+        inline constexpr float food_diffusion_coeff = 0.04f;   // медленная диффузия – сохраняем градиент
+        inline constexpr int steps_for_adding_food = 50;       // каждые 50 шагов
+        inline constexpr int count_of_adding_food = 80;        // достаточно для градиента
     }
 
     namespace colony {
-        inline constexpr int initial_cells_start_x = field::width / 2;
-        inline constexpr int initial_cells_count = 1;
+        // Эти параметры больше не используются (задаём в main.cpp)
+        inline constexpr int initial_cells_start_x = 0;
+        inline constexpr int initial_cells_count = 0;
         inline constexpr int initial_cells_y_from_bottom = 1;
     }
 
     namespace biomass {
-        inline constexpr int max_count_reps = 100;
+        inline constexpr float dispersion_chance = 0.01f;      // редкие прыжки
+        inline constexpr int dispersion_radius = 10;
+        inline constexpr int steps_for_activating = 13500;
+        inline constexpr int max_count_reps = 10000;
         inline constexpr float initial_biomass = 0.5f;
         inline constexpr float max_biomass = 1.0f;
-        inline constexpr float default_max_food_consumed = 5.0f;
-        inline constexpr float food_usage_per_step = 0.0015f;
-        inline constexpr float food_usage_for_step = food_usage_per_step;
         inline constexpr int default_max_age = 10000000;
         inline constexpr float default_resistance = 0.0f;
-        inline constexpr float biomass_growth_per_eaten_unit = 0.1f;
-        inline constexpr float reproduction_min_biomass = 1.0f;
-        inline constexpr float reproduction_chance = 0.2f;
+        inline constexpr float reproduction_min_biomass = 0.8f;
         inline constexpr float child_biomass_ratio = 0.5f;
-        inline constexpr int steps_for_nonactivating = 50;
-        inline constexpr int steps_to_live_forward = 100;
         inline constexpr float nonactive_resistance_multiplier = 2.0f;
-        inline constexpr float nonactive_food_usage_multiplier = 0.0001f;
         inline constexpr float nonactive_max_life_multiplier = 100.0f;
-        inline constexpr float nonactive_biomass_loss_multiplier = 0.0001f;
         inline constexpr int dead_steps_to_disappearance = 10000;
     }
 
     namespace antibiotic {
         inline constexpr float diffusion_coeff = 0.22f;
-        inline constexpr float adding_concentration = 100.0f;
+        inline constexpr float adding_concentration = 0.0f;
         inline constexpr int adding_interval = 20;
         inline constexpr float visualization_normalizer = 5.0f;
         inline constexpr float death_threshold = 0.1f;
@@ -51,6 +45,18 @@ namespace simulation_config {
         inline constexpr float reproduction_penalty = 0.5f;
         inline constexpr float stress_transition_chance = 0.02f;
         inline constexpr float decay_rate = 0.00015f;
+    }
+
+    namespace monod {
+        inline constexpr float U_max = 0.002f;
+        inline constexpr float K_F = 2.0f;                   // насыщение при 2.0
+        inline constexpr float delta_t = 5.0f;
+        inline constexpr float Y_B_F = 0.5f;
+        inline constexpr float m_act = 0.0002f;
+        inline constexpr float m_inactiv = 0.00002f;
+        inline constexpr float starvation_biomass_threshold = 0.2f;
+        inline constexpr float greed_coefficient = 1.5f;
+        inline constexpr int steps_for_waking_up = 50;
     }
 
     namespace graphs {
@@ -79,7 +85,7 @@ namespace simulation_config {
         inline constexpr int target_fps = 30;
         inline constexpr float min_brightness = 0.35f;
         inline constexpr float brightness_span = 0.65f;
-        inline constexpr float standard_nutrition_normalizer = 2.0f;
+        inline constexpr float standard_nutrition_normalizer = field::initial_food * 0.25;
         inline constexpr float modified_nutrition_normalizer = 2.0f;
 
         inline constexpr unsigned char empty_cell_blue_r = 0;

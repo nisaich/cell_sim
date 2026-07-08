@@ -80,11 +80,9 @@ void Field::init_environment(float initial_food) {
 }
 
 void Field::add_some_food(int count_of_adding_food) {
-    for (int x = 0; x < width; x++) {
-        if (x == width / 2) {
-            get_nucleus(x, 0).get_food().set_amount(count_of_adding_food);
-        }
-    }
+    // Точечный источник в центре верхней строки
+    int center = width / 2;
+    get_nucleus(center, 0).get_food().add(count_of_adding_food);
 }
 
 void Field::add_antibiotic(float concentration, int x, int y) {
@@ -120,48 +118,6 @@ void Field::diffuse_food() {
     }
 }
 
-void Field::diffuse_biomass() {
-    std::vector<std::vector<float>> new_biomass(height, std::vector<float>(width, 0.0f));
-
-#pragma omp parallel for collapse(2) schedule(static)
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            std::shared_ptr<abstract_Biomass> cell = get_nucleus(x, y).get_cell();
-            if (cell != nullptr && dynamic_cast<dead_Biomass*>(cell.get()) == nullptr) {
-                float current = cell->get_biomass();
-                float sum_neighbors = 0.0f;
-                float num_active_neighbors = 0.0f;
-
-                for (Cell* nb : get_neighbours(x, y)) {
-                    std::shared_ptr<abstract_Biomass> nb_cell = nb->get_cell();
-                    if (nb_cell != nullptr && dynamic_cast<dead_Biomass*>(nb_cell.get()) == nullptr) {
-                        sum_neighbors += nb_cell->get_biomass();
-                        num_active_neighbors += 1.0f;
-                    }
-                }
-
-                float new_val = current;
-                if (num_active_neighbors > 0.0f) {
-                    new_val = current + simulation_config::field::biomass_diffusion_coeff *
-                        (sum_neighbors - num_active_neighbors * current);
-                }
-                if (new_val < 0.0f) new_val = 0.0f;
-                new_biomass[y][x] = new_val;
-            }
-        }
-    }
-
-#pragma omp parallel for collapse(2) schedule(static)
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            std::shared_ptr<abstract_Biomass> cell = get_nucleus(x, y).get_cell();
-            if (cell != nullptr && dynamic_cast<active_Biomass*>(cell.get()) != nullptr) {
-                cell->biomass = new_biomass[y][x];
-            }
-        }
-    }
-}
-
 void Field::diffuse_antibiotic() {
     std::vector<std::vector<float>> new_antibiotic(height, std::vector<float>(width, 0.0f));
 
@@ -176,11 +132,7 @@ void Field::diffuse_antibiotic() {
             float num_neighbors = static_cast<float>(get_neighbours(x, y).size());
             float new_val = current + simulation_config::antibiotic::diffusion_coeff *
                 (sum_neighbors - num_neighbors * current);
-
-            // Естественное разложение антибиотика (клиренс), иначе он бы
-            // накапливался в поле бесконечно с каждым новым импульсом.
             new_val *= (1.0f - simulation_config::antibiotic::decay_rate);
-
             if (new_val < 0.0f) new_val = 0.0f;
             new_antibiotic[y][x] = new_val;
         }
@@ -310,11 +262,10 @@ void Field::make_one_step(int number_of_step) {
     // Диффузия
     if (number_of_step % simulation_config::visualization::number_of_step_to_diffuse == 0) {
         diffuse_food();
-        diffuse_biomass();
         diffuse_antibiotic();
     }
 
-    // Добавление пищи
+    // Добавление пищи (точечное)
     if (number_of_step % simulation_config::field::steps_for_adding_food == 0) {
         add_some_food(simulation_config::field::count_of_adding_food);
     }
@@ -349,7 +300,7 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
-    // Проверка смерти с учётом антибиотика
+    // Проверка смерти
 #pragma omp parallel for schedule(static)
     for (size_t i = 0; i < cells_for_this_step.size(); ++i) {
         const auto& position = cells_for_this_step[i];
@@ -360,7 +311,6 @@ void Field::make_one_step(int number_of_step) {
             continue;
         }
 
-        // Передаём антибиотик в метод смерти
         if (cell->must_he_die(nucleus.get_food(), nucleus.get_antibiotic())) {
             nucleus.set_cell(std::make_shared<dead_Biomass>());
         }
@@ -376,19 +326,8 @@ void Field::make_one_step(int number_of_step) {
         std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
         if (cell != nullptr && cell->is_alive()) {
-            cell->food_consumption_from_environment(nucleus.get_food());
-        }
-    }
-
-#pragma omp parallel for schedule(static)
-    for (size_t i = 0; i < cells_for_this_step.size(); ++i) {
-        const auto& position = cells_for_this_step[i];
-        Cell& nucleus = get_nucleus(position.first, position.second);
-        std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
-
-        if (cell != nullptr && cell->is_alive()) {
             cell->set_nucleus(&nucleus);
-            cell->depletion_of_savings(nucleus.get_food());
+            cell->consume_and_decay(nucleus.get_food());
         }
     }
 

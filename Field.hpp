@@ -61,7 +61,6 @@ public:
     int get_height() const;
 
     void diffuse_food();
-    void diffuse_biomass();
     void diffuse_antibiotic();   // новый метод
 
     void init_environment(

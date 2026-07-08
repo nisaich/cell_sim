@@ -4,6 +4,7 @@
 #include "visualization.hpp"
 
 #include <memory>
+#include <vector>
 
 int main() {
     const int width = simulation_config::field::width;
@@ -12,22 +13,27 @@ int main() {
     Field simulation_field(width, height);
     simulation_field.init_environment(simulation_config::field::initial_food);
 
-    const int y = height - simulation_config::colony::initial_cells_y_from_bottom;
-    const int end_x = std::min(
-        width,
-        simulation_config::colony::initial_cells_start_x +
-            simulation_config::colony::initial_cells_count
-    );
+    // ---- ТРИ УЧАСТКА ПО 5 КЛЕТОК НА НИЖНЕЙ ГРАНИЦЕ ----
+    const int y = height - 1;  // нижняя строка
+    const int cells_per_group = 5;
+    const int groups = 3;
+    const int total_width = cells_per_group * groups; // 15
+    const int spacing = (width - total_width) / (groups + 1); // отступ между группами
 
-    for (int x = simulation_config::colony::initial_cells_start_x; x < end_x; ++x) {
-      simulation_field.place_cell(
-        x,
-        y,
-        std::make_shared<active_Biomass>()
-      );
+    for (int g = 0; g < groups; ++g) {
+        int start_x = spacing + g * (cells_per_group + spacing);
+        if (start_x + cells_per_group > width) break;
+        for (int x = start_x; x < start_x + cells_per_group; ++x) {
+            simulation_field.place_cell(
+                x,
+                y,
+                std::make_shared<active_Biomass>()
+            );
+        }
     }
+    // -----------------------------------------------------
 
-    visualize(simulation_field, "antibiotic");
+    visualize(simulation_field, simulation_config::visualization::default_color_mode);
 
     return 0;
 }

@@ -10,3 +10,9 @@ Makefile
 simulation_stats.csv
 *.log
 *.tmp
+
+simulation_stats.csv
+
+simulation_test_mod
+
+*.exe

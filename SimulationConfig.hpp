@@ -8,7 +8,6 @@ namespace simulation_config {
         inline constexpr float initial_food = 100.0f;
         inline constexpr float default_initial_food = 0.0f;
         inline constexpr float food_diffusion_coeff = 0.25f;
-        inline constexpr float biomass_diffusion_coeff = 0.0f;
         inline constexpr int steps_for_adding_food = 1000;
         inline constexpr int count_of_adding_food = 0;
     }

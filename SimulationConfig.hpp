@@ -5,10 +5,10 @@ namespace simulation_config {
     namespace field {
         inline constexpr int width = 100;
         inline constexpr int height = 100;
-        inline constexpr float initial_food = 1.0f;
+        inline constexpr float initial_food = 0.50f;
         inline constexpr float default_initial_food = 0.0f;
         inline constexpr float food_diffusion_coeff = 0.25f;
-        inline constexpr float biomass_diffusion_coeff = 0.25f;
+        inline constexpr float biomass_diffusion_coeff = 0.0f;
         inline constexpr int steps_for_adding_food = 1000;
         inline constexpr int count_of_adding_food = 0;
     }
@@ -30,10 +30,10 @@ namespace simulation_config {
         inline constexpr float default_resistance = 0.0f;
         inline constexpr float biomass_growth_per_eaten_unit = 0.1f;
         inline constexpr float reproduction_min_biomass = 1.0f;
-        inline constexpr float reproduction_chance = 0.001f;
+        inline constexpr float reproduction_chance = 0.02f;
         inline constexpr float child_biomass_ratio = 0.5f;
-        inline constexpr int steps_for_nonactivating = 10000;
-        inline constexpr int steps_to_live_forward = 1000;
+        inline constexpr int steps_for_nonactivating = 50;
+        inline constexpr int steps_to_live_forward = 100;
         inline constexpr float nonactive_resistance_multiplier = 2.0f;
         inline constexpr float nonactive_food_usage_multiplier = 0.5f;
         inline constexpr float nonactive_max_life_multiplier = 100.0f;

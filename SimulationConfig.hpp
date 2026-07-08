@@ -5,7 +5,7 @@ namespace simulation_config {
     namespace field {
         inline constexpr int width = 100;
         inline constexpr int height = 100;
-        inline constexpr float initial_food = 5.50f;
+        inline constexpr float initial_food = 66.6f;
         inline constexpr float default_initial_food = 0.0f;
         inline constexpr float food_diffusion_coeff = 0.25f;
         inline constexpr float biomass_diffusion_coeff = 0.0f;
@@ -20,9 +20,9 @@ namespace simulation_config {
     }
 
     namespace biomass {
-        inline constexpr int max_count_reps = 100;
+        inline constexpr int max_count_reps = 10000;
         inline constexpr float initial_biomass = 0.5f;
-        inline constexpr float max_biomass = 1.0f;
+        inline constexpr float max_biomass = 2.0f;
         inline constexpr float default_max_food_consumed = 5.0f;
         inline constexpr float food_usage_per_step = 0.0015f;
         inline constexpr float food_usage_for_step = food_usage_per_step;

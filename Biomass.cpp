@@ -85,9 +85,9 @@ void abstract_Biomass::consume_and_decay(Food& food) {
     // Формула 3: Биомасса после потребления
     biomass += simulation_config::monod::Y_B_F * delta_Food;
     
-    // Формула 4: Трата на поддержание жизнедеятельности
+    // Формула 4: Трата на поддержание жизнедеятельности (с учетом delta_t)
     float m = get_maintenance_rate();
-    biomass = std::max(0.0f, biomass * (1.0f - m));
+    biomass = std::max(0.0f, biomass * (1.0f - m * simulation_config::monod::delta_t));
 }
 
 bool abstract_Biomass::reproduction(Field& current_field, int x, int y) {

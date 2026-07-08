@@ -20,9 +20,10 @@ namespace simulation_config {
     }
 
     namespace biomass {
+        inline constexpr int steps_for_activating = 13500;  //количество шагов на выход из стационарного состояния
         inline constexpr int max_count_reps = 10000;
         inline constexpr float initial_biomass = 0.5f;
-        inline constexpr float max_biomass = 2.0f;
+        inline constexpr float max_biomass = 1.2f;
         inline constexpr int default_max_age = 10000000;
         inline constexpr float default_resistance = 0.0f;
         inline constexpr float reproduction_min_biomass = 1.0f;
@@ -52,6 +53,9 @@ namespace simulation_config {
         inline constexpr float Y_B_F = 0.52f;
         inline constexpr float m_act = 0.074f;
         inline constexpr float m_inactiv = 0.00074f; // 0.74 * 10^-3
+        inline constexpr float starvation_biomass_threshold = 0.2f;
+        inline constexpr float greed_coefficient = 1.5f;
+        inline constexpr int steps_for_waking_up = 50;
     }
 
     namespace graphs {

@@ -59,6 +59,7 @@ class nonactive_Biomass : public abstract_Biomass {
 private:
     float resistance_multiplier = simulation_config::biomass::nonactive_resistance_multiplier;
     float max_life_multiplier = simulation_config::biomass::nonactive_max_life_multiplier;
+    int steps_until_wakeup = 0;
 public:
     nonactive_Biomass() = default;
     nonactive_Biomass(

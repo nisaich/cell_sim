@@ -107,7 +107,16 @@ void active_Biomass::consume_and_decay(Food& food) {
     // 1. Стандартное поведение (питание по Моно и базовый распад)
     abstract_Biomass::consume_and_decay(food);
 
-    // 2. Проверка на стресс от антибиотика (переход в неактивное состояние)
+    // 2. Проверка на недостаток биомассы (голодание)
+    if (nucleus != nullptr && biomass < simulation_config::monod::starvation_biomass_threshold) {
+        auto nonactive = std::make_shared<nonactive_Biomass>();
+        copy_common_state_to(*nonactive);
+        nonactive->apply_dormancy_effects();
+        nucleus->set_cell(nonactive);
+        return;
+    }
+
+    // 3. Проверка на стресс от антибиотика (переход в неактивное состояние)
     if (nucleus != nullptr) {
         float conc = nucleus->get_antibiotic().get_concentration();
         float excess = conc - level_of_resistance;
@@ -205,15 +214,27 @@ int nonactive_Biomass::baseline_max_age() const {
 
 bool nonactive_Biomass::reproduction(Field& current_field, int x, int y) {
     Cell& nucleus = current_field.get_nucleus(x, y);
-    // Пробуждение, если еды достаточно для эффективного питания
-    if (nucleus.get_food().get_amount() > simulation_config::monod::K_F) {
-        auto active_cell = std::make_shared<active_Biomass>();
-        copy_common_state_to(*active_cell);
-        // Возвращаем базовые (немодифицированные дормантностью) параметры.
-        active_cell->level_of_resistance = baseline_resistance();
-        active_cell->max_age_of_cell = baseline_max_age();
-        nucleus.set_cell(active_cell);
+    
+    if (steps_until_wakeup > 0) {
+        steps_until_wakeup--;
+        if (steps_until_wakeup == 0) {
+            auto active_cell = std::make_shared<active_Biomass>();
+            copy_common_state_to(*active_cell);
+            active_cell->level_of_resistance = baseline_resistance();
+            active_cell->max_age_of_cell = baseline_max_age();
+            nucleus.set_cell(active_cell);
+        }
+    } else {
+        float F = nucleus.get_food().get_amount();
+        float potential_income = simulation_config::monod::Y_B_F * 
+            (simulation_config::monod::U_max * F / (simulation_config::monod::K_F + F) * simulation_config::monod::delta_t);
+        float threshold = simulation_config::monod::m_act * simulation_config::monod::delta_t * biomass * simulation_config::monod::greed_coefficient;
+        
+        if (potential_income > threshold) {
+            steps_until_wakeup = simulation_config::monod::steps_for_waking_up;
+        }
     }
+    
     return false;
 }
 

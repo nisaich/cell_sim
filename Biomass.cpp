@@ -142,22 +142,22 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     if (biomass < simulation_config::biomass::reproduction_min_biomass) return false;
 
     static std::mt19937 generator(std::random_device{}());
-    std::uniform_real_distribution<float> chance_distribution(0.00f, 1.00f);
 
-    float reproduction_chance = simulation_config::biomass::reproduction_chance;
-
+    float current_chance = 1.0f;
     // Влияние антибиотика
     if (nucleus != nullptr) {
         float conc = nucleus->get_antibiotic().get_concentration();
         float excess = conc - level_of_resistance;
         if (excess > 0.0f) {
             float penalty = std::min(excess * 0.1f, simulation_config::antibiotic::reproduction_penalty);
-            reproduction_chance *= (1.0f - penalty);
-            if (reproduction_chance < 0.0f) reproduction_chance = 0.0f;
+            current_chance *= (1.0f - penalty);
         }
     }
 
-    if (chance_distribution(generator) > reproduction_chance) return false;
+    if (current_chance < 1.0f) {
+        std::uniform_real_distribution<float> chance_distribution(0.00f, 1.00f);
+        if (chance_distribution(generator) > current_chance) return false;
+    }
 
     // Выбираем случайного свободного соседа (науч. рук. сказал удалить умный поиск еды)
     std::uniform_int_distribution<std::size_t> distribution(0, free_neighbours.size() - 1);

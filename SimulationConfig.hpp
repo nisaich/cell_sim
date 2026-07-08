@@ -23,11 +23,10 @@ namespace simulation_config {
         inline constexpr int steps_for_activating = 13500;  //количество шагов на выход из стационарного состояния
         inline constexpr int max_count_reps = 10000;
         inline constexpr float initial_biomass = 0.5f;
-        inline constexpr float max_biomass = 1.2f;
+        inline constexpr float max_biomass = 1.0f;
         inline constexpr int default_max_age = 10000000;
         inline constexpr float default_resistance = 0.0f;
         inline constexpr float reproduction_min_biomass = 1.0f;
-        inline constexpr float reproduction_chance = 0.02f;
         inline constexpr float child_biomass_ratio = 0.5f;
         inline constexpr float nonactive_resistance_multiplier = 2.0f;
         inline constexpr float nonactive_max_life_multiplier = 100.0f;

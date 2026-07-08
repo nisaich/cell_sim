@@ -182,6 +182,35 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     );
     child->biomass = child_biomass;
 
+    // --- ЛОГИКА ПРЫЖКА (DISPERSION) ---
+    std::uniform_real_distribution<float> dispersion_dist(0.0f, 1.0f);
+    if (dispersion_dist(generator) < simulation_config::biomass::dispersion_chance) {
+        int R = simulation_config::biomass::dispersion_radius;
+        std::vector<Cell*> potential_targets;
+        
+        // Собираем все непустые клетки в радиусе R
+        int start_x = std::max(0, x - R);
+        int end_x = std::min(simulation_config::field::width - 1, x + R);
+        int start_y = std::max(0, y - R);
+        int end_y = std::min(simulation_config::field::height - 1, y + R);
+        
+        for (int i = start_x; i <= end_x; ++i) {
+            for (int j = start_y; j <= end_y; ++j) {
+                if (i == x && j == y) continue; // Не прыгаем в родителя
+                Cell& target = current_field.get_nucleus(i, j);
+                if (!target.is_this_nucleus_free()) {
+                    potential_targets.push_back(&target);
+                }
+            }
+        }
+        
+        if (!potential_targets.empty()) {
+            std::uniform_int_distribution<std::size_t> target_dist(0, potential_targets.size() - 1);
+            place_for_child = potential_targets[target_dist(generator)];
+        }
+    }
+    // ----------------------------------
+
     place_for_child->set_cell(child);
     return true;
 }

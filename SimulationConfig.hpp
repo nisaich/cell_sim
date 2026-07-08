@@ -5,7 +5,7 @@ namespace simulation_config {
     namespace field {
         inline constexpr int width = 100;
         inline constexpr int height = 100;
-        inline constexpr float initial_food = 300.0f;
+        inline constexpr float initial_food = 100.0f;
         inline constexpr float default_initial_food = 0.0f;
         inline constexpr float food_diffusion_coeff = 0.25f;
         inline constexpr float biomass_diffusion_coeff = 0.0f;
@@ -20,13 +20,15 @@ namespace simulation_config {
     }
 
     namespace biomass {
+        inline constexpr float dispersion_chance = 0.001f;
+        inline constexpr int dispersion_radius = 10;
         inline constexpr int steps_for_activating = 13500;  //количество шагов на выход из стационарного состояния
         inline constexpr int max_count_reps = 10000;
         inline constexpr float initial_biomass = 0.5f;
         inline constexpr float max_biomass = 1.0f;
         inline constexpr int default_max_age = 10000000;
         inline constexpr float default_resistance = 0.0f;
-        inline constexpr float reproduction_min_biomass = 1.0f;
+        inline constexpr float reproduction_min_biomass = 0.9f;
         inline constexpr float child_biomass_ratio = 0.5f;
         inline constexpr float nonactive_resistance_multiplier = 2.0f;
         inline constexpr float nonactive_max_life_multiplier = 100.0f;

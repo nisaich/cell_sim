@@ -198,8 +198,20 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
             for (int j = start_y; j <= end_y; ++j) {
                 if (i == x && j == y) continue; // Не прыгаем в родителя
                 Cell& target = current_field.get_nucleus(i, j);
-                if (!target.is_this_nucleus_free()) {
-                    potential_targets.push_back(&target);
+                if (target.is_this_nucleus_free()) {
+                    bool supported = false;
+                    if (j == 0) {
+                        supported = true; // На полу
+                    } else {
+                        Cell& below = current_field.get_nucleus(i, j - 1);
+                        if (!below.is_this_nucleus_free()) {
+                            supported = true; // Стоит на другой клетке
+                        }
+                    }
+                    
+                    if (supported) {
+                        potential_targets.push_back(&target);
+                    }
                 }
             }
         }

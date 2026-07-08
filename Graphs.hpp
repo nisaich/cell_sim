@@ -16,6 +16,7 @@ struct SimulationStats {
     int maxHeight = 0;
     float avgAntibiotic = 0.0f;
     float maxAntibiotic = 0.0f;
+    float avgBiomass = 0.0f;
 };
 
 SimulationStats collectStats(const Field& field, int tick);

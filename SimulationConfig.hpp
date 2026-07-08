@@ -5,7 +5,7 @@ namespace simulation_config {
     namespace field {
         inline constexpr int width = 100;
         inline constexpr int height = 100;
-        inline constexpr float initial_food = 0.50f;
+        inline constexpr float initial_food = 5.50f;
         inline constexpr float default_initial_food = 0.0f;
         inline constexpr float food_diffusion_coeff = 0.25f;
         inline constexpr float biomass_diffusion_coeff = 0.0f;

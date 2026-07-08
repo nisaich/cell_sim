@@ -119,7 +119,7 @@ void drawSeries(
 CsvStatsRecorder::CsvStatsRecorder(const std::string& path)
     : csv(path) {
     if (csv.is_open()) {
-        csv << "tick,liveCells,deadCells,emptyCells,avgFood,totalFood,maxHeight,avgAntibiotic,maxAntibiotic\n";
+        csv << "tick,liveCells,deadCells,emptyCells,avgFood,totalFood,maxHeight,avgAntibiotic,maxAntibiotic,avgBiomass\n";
     }
 }
 
@@ -142,7 +142,8 @@ void CsvStatsRecorder::record(const Field& field, int tick) {
         << stats.totalFood << ","
         << stats.maxHeight << ","
         << stats.avgAntibiotic << ","
-        << stats.maxAntibiotic << "\n";
+        << stats.maxAntibiotic << ","
+        << stats.avgBiomass << "\n";
 }
 
 SimulationStats collectStats(const Field& field, int tick) {
@@ -160,6 +161,7 @@ SimulationStats collectStats(const Field& field, int tick) {
                 ++stats.emptyCells;
             } else if (cell->is_alive()) {
                 ++stats.liveCells;
+                stats.avgBiomass += cell->get_biomass();
 
                 const int height = field.get_height() - y;
                 if (height > stats.maxHeight) {
@@ -182,6 +184,10 @@ SimulationStats collectStats(const Field& field, int tick) {
     if (totalCells > 0) {
         stats.avgFood = stats.totalFood / totalCells;
         stats.avgAntibiotic /= totalCells;
+    }
+    
+    if (stats.liveCells > 0) {
+        stats.avgBiomass /= stats.liveCells;
     }
 
     return stats;
@@ -247,6 +253,13 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
         simulation_config::graphs::text_font_size,
         DARKBLUE
     );
+    DrawText(
+        TextFormat("Avg biomass: %.3f", latest.avgBiomass),
+        x + simulation_config::graphs::panel_padding,
+        y + 94,
+        simulation_config::graphs::text_font_size,
+        DARKGREEN
+    );
 
     std::vector<float> liveCells;
     std::vector<float> deadCells;
@@ -255,6 +268,7 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
     std::vector<float> maxHeight;
     std::vector<float> avgAntibiotic;
     std::vector<float> maxAntibiotic;
+    std::vector<float> avgBiomass;
 
     liveCells.reserve(history.size());
     deadCells.reserve(history.size());
@@ -263,6 +277,7 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
     maxHeight.reserve(history.size());
     avgAntibiotic.reserve(history.size());
     maxAntibiotic.reserve(history.size());
+    avgBiomass.reserve(history.size());
 
     for (const SimulationStats& stats : history) {
         liveCells.push_back(static_cast<float>(stats.liveCells));
@@ -272,12 +287,13 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
         maxHeight.push_back(static_cast<float>(stats.maxHeight));
         avgAntibiotic.push_back(stats.avgAntibiotic);
         maxAntibiotic.push_back(stats.maxAntibiotic);
+        avgBiomass.push_back(stats.avgBiomass);
     }
 
     const int chartsTop = y + simulation_config::graphs::header_bottom;
     const int chartsHeight = height - simulation_config::graphs::header_bottom -
-        simulation_config::graphs::panel_padding;
-    const int chartHeight = (chartsHeight - 4 * simulation_config::graphs::section_gap) / 5;
+        simulation_config::graphs::panel_padding - 16; // 16 for extra header line
+    const int chartHeight = (chartsHeight - 5 * simulation_config::graphs::section_gap) / 6;
     const int chartWidth = width - 2 * simulation_config::graphs::panel_padding;
 
     drawSeries(
@@ -351,5 +367,19 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
         &maxAntibiotic,
         VIOLET,
         "Max antibiotic"
+    );
+    drawSeries(
+        history,
+        Rectangle{
+            static_cast<float>(x + simulation_config::graphs::panel_padding),
+            static_cast<float>(
+                chartsTop + 5 * (chartHeight + simulation_config::graphs::section_gap)
+            ),
+            static_cast<float>(chartWidth),
+            static_cast<float>(chartHeight)
+        },
+        avgBiomass,
+        DARKGREEN,
+        "Avg biomass"
     );
 }

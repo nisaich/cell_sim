@@ -376,19 +376,8 @@ void Field::make_one_step(int number_of_step) {
         std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
         if (cell != nullptr && cell->is_alive()) {
-            cell->food_consumption_from_environment(nucleus.get_food());
-        }
-    }
-
-#pragma omp parallel for schedule(static)
-    for (size_t i = 0; i < cells_for_this_step.size(); ++i) {
-        const auto& position = cells_for_this_step[i];
-        Cell& nucleus = get_nucleus(position.first, position.second);
-        std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
-
-        if (cell != nullptr && cell->is_alive()) {
             cell->set_nucleus(&nucleus);
-            cell->depletion_of_savings(nucleus.get_food());
+            cell->consume_and_decay(nucleus.get_food());
         }
     }
 

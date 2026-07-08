@@ -35,13 +35,14 @@ public:
     void increase_age();
     void set_nucleus(Cell* current_nucleus);
 
-    void food_consumption_from_environment(Food& food);
-
     virtual bool is_alive() const = 0;
 
     virtual bool reproduction(Field& current_field, int x, int y);
 
-    virtual void depletion_of_savings(Food& food);
+    virtual void consume_and_decay(Food& food);
+    virtual float is_active_for_monod() const = 0;
+    virtual float get_maintenance_rate() const = 0;
+
     virtual void step_after_death();
     virtual bool should_be_removed_from_field() const;
 };
@@ -53,7 +54,9 @@ public:
 
     bool is_alive() const override;
     bool reproduction(Field& current_field, int x, int y) override;
-    void depletion_of_savings(Food& food) override; // добавим для перехода в неактивное состояние
+    void consume_and_decay(Food& food) override;
+    float is_active_for_monod() const override { return 1.0f; }
+    float get_maintenance_rate() const override { return simulation_config::monod::m_act; }
 };
 
 class nonactive_Biomass : public abstract_Biomass {
@@ -71,8 +74,10 @@ public:
     );
 
     bool is_alive() const override { return true; }
-    void depletion_of_savings(Food& food) override;
     bool reproduction(Field& current_field, int x, int y) override;
+    
+    float is_active_for_monod() const override { return 0.0f; }
+    float get_maintenance_rate() const override { return simulation_config::monod::m_inactiv; }
 
     // Применяет коэффициенты дормантности (устойчивость/возраст/расход пищи)
     // к уже скопированному общему состоянию клетки. Вызывается сразу после
@@ -90,6 +95,10 @@ private:
     int count_of_steps_to_disappearance = simulation_config::biomass::dead_steps_to_disappearance;
 public:
     int count_of_steps_from_death = 0;
+    
+    float is_active_for_monod() const override { return 0.0f; }
+    float get_maintenance_rate() const override { return 0.0f; }
+    
     void step_after_death() override;
     bool should_be_removed_from_field() const override;
     bool is_it_still_there() const;

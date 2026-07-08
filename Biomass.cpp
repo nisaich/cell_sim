@@ -30,8 +30,8 @@ float abstract_Biomass::get_biomass() const {
 }
 
 bool abstract_Biomass::must_he_die(Food& food, const Antibiotic& antibiotic) const {
-    // Старые условия
-    if (age_of_cell >= max_age_of_cell || biomass <= 0.0f) return true;
+    // Старые условия (для истощения порог поднят до 0.001 из-за асимптотического убывания Моно)
+    if (age_of_cell >= max_age_of_cell || biomass <= 0.001f) return true;
 
     // Влияние антибиотика
     float conc = antibiotic.get_concentration();
@@ -63,38 +63,31 @@ bool abstract_Biomass::should_be_removed_from_field() const {
     return false;
 }
 
-void abstract_Biomass::food_consumption_from_environment(Food& food) {
-    float wanted_food = std::min(food.get_amount(), static_cast<float>(max_amount_of_food_consumed));
-    if (wanted_food > 0.0f && biomass < simulation_config::biomass::max_biomass) {
-        float eaten = food.take(wanted_food);
-        biomass += eaten;
+void abstract_Biomass::consume_and_decay(Food& food) {
+    float a = is_active_for_monod(); 
+    float F = food.get_amount();
+    
+    // Формула 1: u_t
+    float u = 0.0f;
+    if (F > 0.0f) {
+        u = simulation_config::monod::U_max * (F / (simulation_config::monod::K_F + F)) * a;
     }
-}
-
-void abstract_Biomass::depletion_of_savings(Food& food) {
-    float available_food = food.get_amount();
-    if (steps_for_nonactivating != simulation_config::biomass::steps_for_nonactivating && \
-        steps_for_nonactivating != 0) {
-        steps_for_nonactivating--;
-    }
-    else if (available_food < steps_to_live_forward * using_food_for_step && \
-        steps_for_nonactivating >0) {
-        steps_for_nonactivating--;
-    }
-    else if (steps_for_nonactivating == 0) {
-        auto nonactive_cell = std::make_shared<nonactive_Biomass>();
-        copy_common_state_to(*nonactive_cell);
-        nonactive_cell->apply_dormancy_effects();
-        nucleus->set_cell(nonactive_cell);
-        steps_for_nonactivating = simulation_config::biomass::steps_for_nonactivating;
-        return;
-    }
-
-    float eaten = food.take(using_food_for_step);
-    float deficit = using_food_for_step - eaten;
-    if (deficit > 0.0f) {
-        biomass = std::max(0.0f, biomass - deficit);
-    }
+    
+    // Формула 2: Delta Food
+    float u_dt = u * simulation_config::monod::delta_t;
+    float space_limit = std::max(0.0f, (simulation_config::biomass::max_biomass - biomass) / simulation_config::monod::Y_B_F);
+    
+    float delta_Food = std::min({F, u_dt, space_limit});
+    if (delta_Food < 0.0f) delta_Food = 0.0f;
+    
+    food.take(delta_Food);
+    
+    // Формула 3: Биомасса после потребления
+    biomass += simulation_config::monod::Y_B_F * delta_Food;
+    
+    // Формула 4: Трата на поддержание жизнедеятельности
+    float m = get_maintenance_rate();
+    biomass = std::max(0.0f, biomass * (1.0f - m));
 }
 
 bool abstract_Biomass::reproduction(Field& current_field, int x, int y) {
@@ -111,11 +104,11 @@ bool active_Biomass::is_alive() const {
     return true;
 }
 
-void active_Biomass::depletion_of_savings(Food& food) {
-    // Сначала стандартное поведение (голодание)
-    abstract_Biomass::depletion_of_savings(food);
+void active_Biomass::consume_and_decay(Food& food) {
+    // 1. Стандартное поведение (питание по Моно и базовый распад)
+    abstract_Biomass::consume_and_decay(food);
 
-    // Теперь проверка на стресс от антибиотика (переход в неактивное состояние)
+    // 2. Проверка на стресс от антибиотика (переход в неактивное состояние)
     if (nucleus != nullptr) {
         float conc = nucleus->get_antibiotic().get_concentration();
         float excess = conc - level_of_resistance;
@@ -216,18 +209,7 @@ int nonactive_Biomass::baseline_max_age() const {
     return static_cast<int>(max_age_of_cell / max_life_multiplier);
 }
 
-void nonactive_Biomass::depletion_of_savings(Food& food) {
-    float available_food = food.get_amount();
-    if (available_food < using_food_for_step) {
-        biomass = std::max(
-            0.0f,
-            biomass - using_food_for_step *
-            simulation_config::biomass::nonactive_biomass_loss_multiplier
-        );
-        return;
-    }
-    food.take(using_food_for_step);
-}
+// depletion_of_savings удалён, используется consume_and_decay из abstract_Biomass
 
 bool nonactive_Biomass::reproduction(Field& current_field, int x, int y) {
     const float food_now = simulation_config::biomass::food_usage_for_step;

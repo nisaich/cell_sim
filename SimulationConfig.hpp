@@ -53,6 +53,15 @@ namespace simulation_config {
         inline constexpr float decay_rate = 0.00015f;
     }
 
+    namespace monod {
+        inline constexpr float U_max = 0.185f;
+        inline constexpr float K_F = 33.3f;
+        inline constexpr float delta_t = 0.1f;
+        inline constexpr float Y_B_F = 0.52f;
+        inline constexpr float m_act = 0.074f;
+        inline constexpr float m_inactiv = 0.00074f; // 0.74 * 10^-3
+    }
+
     namespace graphs {
         inline constexpr int panel_padding = 12;
         inline constexpr int section_gap = 10;

@@ -6,13 +6,13 @@ namespace simulation_config {
         // 1 ячейка = 1 мкм. 1000x1000 ячеек = 1 мм x 1 мм.
         // Это физически достоверно для Pseudomonas aeruginosa (размер клетки ~1-2 мкм)
         // и обеспечивает идеальную производительность в 60 FPS на C++.
-        inline constexpr int width = 1000;
-        inline constexpr int height = 1000;
+        inline constexpr int width = 100;
+        inline constexpr int height = 100;
 
         // Начальная концентрация глюкозы в среде.
         // Для активного роста в закрытой колбе/чашке Петри используем 3.0 г/л = 3 000 000 мкг/л.
         // При такой концентрации бактерии смогут делиться многократно.
-        inline constexpr double initial_food = 3000000.0;
+        inline constexpr double initial_food = 300.0;
         inline constexpr double default_initial_food = 0.0;
         inline constexpr double food_diffusion_coeff = 0.20;   // Быстрая диффузия для адекватного перераспределения
         inline constexpr int steps_for_adding_food = 10000;
@@ -85,8 +85,8 @@ namespace simulation_config {
         inline constexpr int initial_window_height = 900;
         inline constexpr int screen_width = 1000;
         inline constexpr int screen_height = 1000;
-        inline constexpr int target_fps = 60;
-        inline constexpr int steps_per_frame = 20;              // Количество шагов симуляции за один кадр отрисовки
+        inline constexpr int target_fps = 0;
+        inline constexpr int steps_per_frame = 200;              // Количество шагов симуляции за один кадр отрисовки
 
         inline constexpr int graph_panel_width = 400;
         inline constexpr int modified_content_gap = 20;
@@ -95,8 +95,8 @@ namespace simulation_config {
 
         inline constexpr double min_brightness = 0.35;
         inline constexpr double brightness_span = 0.65;
-        inline constexpr double standard_nutrition_normalizer = field::initial_food * 0.25;
-        inline constexpr double modified_nutrition_normalizer = 2.0;
+        inline constexpr double standard_nutrition_normalizer = field::initial_food * 0.01;
+        inline constexpr double modified_nutrition_normalizer = field::initial_food;
 
         inline constexpr unsigned char empty_cell_blue_r = 0;
         inline constexpr unsigned char empty_cell_blue_g = 100;
@@ -126,7 +126,7 @@ namespace simulation_config {
         inline constexpr int legend_font_size = 15;
 
         // Режим цвета по умолчанию: "standard", "age", "resistance", "nutrition", "antibiotic"
-        inline constexpr const char* default_color_mode = "standard";
+        inline constexpr const char* default_color_mode = "nutrition";
     }
 
     namespace graphs {

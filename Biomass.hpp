@@ -44,6 +44,8 @@ public:
 };
 
 class active_Biomass : public abstract_Biomass {
+private:
+    int steps_active = 0;
 public:
     active_Biomass() = default;
     active_Biomass(float resistance, int max_age);

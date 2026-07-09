@@ -3,11 +3,11 @@
 namespace simulation_config {
 
     namespace field {
-        inline constexpr int width = 200;
+        inline constexpr int width = 100;
         inline constexpr int height = 200;
         inline constexpr float initial_food = 2.0f;           // умеренно
         inline constexpr float default_initial_food = 0.0f;
-        inline constexpr float food_diffusion_coeff = 0.24f;   // медленная диффузия – сохраняем градиент
+        inline constexpr float food_diffusion_coeff = 0.04f;   // медленная диффузия – сохраняем градиент
         inline constexpr int steps_for_adding_food = 10000;       // каждые 50 шагов
         inline constexpr int count_of_adding_food = 0;        // достаточно для градиента
     }
@@ -47,6 +47,7 @@ namespace simulation_config {
         inline constexpr float decay_rate = 0.00015f;
     }
 
+    // у нас Pseudomonas aeruginosa
     namespace monod {
         inline constexpr float U_max = 0.002f;
         inline constexpr float K_F = 2.0f;                   // насыщение при 2.0

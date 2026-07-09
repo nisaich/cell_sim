@@ -99,13 +99,16 @@ bool active_Biomass::is_alive() const {
 
 void active_Biomass::consume_and_decay(Food& food) {
     abstract_Biomass::consume_and_decay(food);
+    steps_active++;
 
     if (nucleus != nullptr && biomass < simulation_config::monod::starvation_biomass_threshold) {
-        auto nonactive = std::make_shared<nonactive_Biomass>();
-        copy_common_state_to(*nonactive);
-        nonactive->apply_dormancy_effects();
-        nucleus->set_cell(nonactive);
-        return;
+        if (steps_active >= simulation_config::monod::steps_for_waking_up) {
+            auto nonactive = std::make_shared<nonactive_Biomass>();
+            copy_common_state_to(*nonactive);
+            nonactive->apply_dormancy_effects();
+            nucleus->set_cell(nonactive);
+            return;
+        }
     }
 
     if (nucleus != nullptr) {

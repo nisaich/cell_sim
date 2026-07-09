@@ -218,7 +218,7 @@ public:
         }
 
         float biomass_ratio = std::clamp(
-            cell->get_biomass() / simulation_config::biomass::reproduction_min_biomass,
+            static_cast<float>(cell->get_biomass() / simulation_config::biomass::reproduction_min_biomass),
             0.0f,
             1.0f
         );

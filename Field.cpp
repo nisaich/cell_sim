@@ -7,7 +7,7 @@
 Cell::Cell(
     int x,
     int y,
-    float start_food,
+    double start_food,
     float start_antibiotic
 )
     : cell_coordinates{ x, y },
@@ -30,7 +30,7 @@ void Cell::remove_cell() {
     cell = nullptr;
 }
 
-std::pair<float, float> Cell::situation_in_the_environment() const {
+std::pair<double, float> Cell::situation_in_the_environment() const {
     return {
         food.get_amount(),
         antibiotic.get_concentration()
@@ -92,20 +92,20 @@ void Field::add_antibiotic(float concentration, int x, int y) {
 }
 
 void Field::diffuse_food() {
-    std::vector<std::vector<float>> new_food(height, std::vector<float>(width, 0.0f));
+    std::vector<std::vector<double>> new_food(height, std::vector<double>(width, 0.0));
 
 #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            float current = get_nucleus(x, y).get_food().get_amount();
-            float sum_neighbors = 0.0f;
+            double current = get_nucleus(x, y).get_food().get_amount();
+            double sum_neighbors = 0.0;
             for (Cell* nb : get_neighbours(x, y)) {
                 sum_neighbors += nb->get_food().get_amount();
             }
-            float num_neighbors = static_cast<float>(get_neighbours(x, y).size());
-            float new_val = current + simulation_config::field::food_diffusion_coeff *
+            double num_neighbors = static_cast<double>(get_neighbours(x, y).size());
+            double new_val = current + static_cast<double>(simulation_config::field::food_diffusion_coeff) *
                 (sum_neighbors - num_neighbors * current);
-            if (new_val < 0.0f) new_val = 0.0f;
+            if (new_val < 0.0) new_val = 0.0;
             new_food[y][x] = new_val;
         }
     }

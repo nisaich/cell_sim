@@ -3,29 +3,29 @@
 #include <algorithm>
 #include <cmath>
 
-Food::Food(float start_amount)
+Food::Food(double start_amount)
     : amount(start_amount) {}
 
-float Food::get_amount() const {
+double Food::get_amount() const {
     return amount;
 }
 
-void Food::set_amount(float value) {
-    amount = (value >= 0.0f) ? value : 0.0f;
+void Food::set_amount(double value) {
+    amount = (value >= 0.0) ? value : 0.0;
 }
 
-void Food::add(float value) {
-    if (value > 0.0f) {
+void Food::add(double value) {
+    if (value > 0.0) {
         amount += value;
     }
 }
 
-float Food::take(float wanted_amount) {
-    if (wanted_amount <= 0.0f) {
-        return 0.0f;
+double Food::take(double wanted_amount) {
+    if (wanted_amount <= 0.0) {
+        return 0.0;
     }
 
-    float taken = std::min(amount, wanted_amount);
+    double taken = std::min(amount, wanted_amount);
 
     amount -= taken;
 

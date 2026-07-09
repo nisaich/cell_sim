@@ -23,7 +23,7 @@ public:
     Cell(
         int x,
         int y,
-        float start_food = 0,
+        double start_food = 0.0,
         float start_antibiotic = 0.0f
     );
 
@@ -33,7 +33,7 @@ public:
     std::shared_ptr<abstract_Biomass> get_cell() const;
     void remove_cell();
 
-    std::pair<float, float> situation_in_the_environment() const;
+    std::pair<double, float> situation_in_the_environment() const;
     std::array<int, 2> coordinates() const;
 
     Food& get_food();

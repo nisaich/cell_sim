@@ -149,24 +149,9 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
         if (chance_distribution(generator) > current_chance) return false;
     }
 
-    // ---- ВЫБОР СОСЕДА ПО КОЛИЧЕСТВУ ПИЩИ (БЕЗ УКЛОНА) ----
-    std::vector<std::pair<float, Cell*>> scored;
-    for (Cell* nb : free_neighbours) {
-        float food = nb->get_food().get_amount();
-        scored.push_back({ food, nb });
-    }
-
-    std::sort(scored.begin(), scored.end(),
-        [](const auto& a, const auto& b) { return a.first > b.first; });
-
-    std::vector<Cell*> candidates;
-    size_t topN = std::min(size_t(3), scored.size());
-    for (size_t i = 0; i < topN; ++i) {
-        candidates.push_back(scored[i].second);
-    }
-    std::uniform_int_distribution<size_t> dist(0, candidates.size() - 1);
-    Cell* place_for_child = candidates[dist(generator)];
-    // -------------------------------------------------
+    // Выбираем случайного свободного соседа
+    std::uniform_int_distribution<std::size_t> distribution(0, free_neighbours.size() - 1);
+    Cell* place_for_child = free_neighbours[distribution(generator)];
 
     float child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
     biomass = biomass - child_biomass;
@@ -197,13 +182,10 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
                 Cell& target = current_field.get_nucleus(i, j);
                 if (target.is_this_nucleus_free()) {
                     bool supported = false;
-                    if (j == 0) {
-                        supported = true;
-                    }
-                    else {
-                        Cell& below = current_field.get_nucleus(i, j - 1);
-                        if (!below.is_this_nucleus_free()) {
+                    for (Cell* nb : current_field.get_neighbours(i, j)) {
+                        if (!nb->is_this_nucleus_free()) {
                             supported = true;
+                            break;
                         }
                     }
                     if (supported) {

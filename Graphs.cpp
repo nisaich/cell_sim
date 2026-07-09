@@ -8,15 +8,16 @@
 #include <cmath>
 
 namespace {
+template<typename GetterA, typename GetterB>
 void drawSeries(
     const std::vector<SimulationStats>& history,
     Rectangle area,
-    const std::vector<float>& valuesA,
+    GetterA getValueA,
     Color colorA,
     const char* labelA,
-    const std::vector<float>* valuesB = nullptr,
-    Color colorB = BLACK,
-    const char* labelB = nullptr
+    GetterB getValueB,
+    Color colorB,
+    const char* labelB
 ) {
     DrawRectangleRounded(
         area,
@@ -30,7 +31,7 @@ void drawSeries(
         LIGHTGRAY
     );
 
-    if (history.size() < 2 || valuesA.size() != history.size()) {
+    if (history.size() < 2) {
         DrawText(
             "Not enough data",
             area.x + 10,
@@ -41,19 +42,14 @@ void drawSeries(
         return;
     }
 
-    float minValue = valuesA.front();
-    float maxValue = valuesA.front();
+    float minValue = getValueA(history.front());
+    float maxValue = getValueA(history.front());
 
-    for (float value : valuesA) {
-        minValue = std::min(minValue, value);
-        maxValue = std::max(maxValue, value);
-    }
-
-    if (valuesB != nullptr) {
-        for (float value : *valuesB) {
-            minValue = std::min(minValue, value);
-            maxValue = std::max(maxValue, value);
-        }
+    for (const auto& stats : history) {
+        float valA = getValueA(stats);
+        float valB = getValueB(stats);
+        minValue = std::min(minValue, std::min(valA, valB));
+        maxValue = std::max(maxValue, std::max(valA, valB));
     }
 
     if (std::fabs(maxValue - minValue) < simulation_config::graphs::chart_span_epsilon) {
@@ -68,28 +64,26 @@ void drawSeries(
     const float graphHeight = bottom - top;
 
     DrawText(labelA, left, area.y + 6.0f, 14, colorA);
-    if (labelB != nullptr) {
-        DrawText(labelB, left + 110.0f, area.y + 6.0f, 14, colorB);
-    }
+    DrawText(labelB, left + 110.0f, area.y + 6.0f, 14, colorB);
 
     DrawLine(left, bottom, right, bottom, GRAY);
     DrawLine(left, top, left, bottom, GRAY);
 
-    auto drawLineForValues = [&](const std::vector<float>& values, Color color) {
-        size_t step = std::max<size_t>(1, values.size() / static_cast<size_t>(graphWidth));
+    auto drawLineForValues = [&](auto getValue, Color color) {
+        size_t step = std::max<size_t>(1, history.size() / static_cast<size_t>(graphWidth));
         size_t prev_idx = 0;
-        for (size_t i = step; i < values.size(); i += step) {
-            if (i + step >= values.size()) {
-                i = values.size() - 1; // ensure we draw the last point
+        for (size_t i = step; i < history.size(); i += step) {
+            if (i + step >= history.size()) {
+                i = history.size() - 1; // ensure we draw the last point
             }
             const float prevX = left + graphWidth * static_cast<float>(prev_idx) /
-                static_cast<float>(values.size() - 1);
+                static_cast<float>(history.size() - 1);
             const float nextX = left + graphWidth * static_cast<float>(i) /
-                static_cast<float>(values.size() - 1);
+                static_cast<float>(history.size() - 1);
 
-            const float prevY = bottom - graphHeight * (values[prev_idx] - minValue) /
+            const float prevY = bottom - graphHeight * (getValue(history[prev_idx]) - minValue) /
                 (maxValue - minValue);
-            const float nextY = bottom - graphHeight * (values[i] - minValue) /
+            const float nextY = bottom - graphHeight * (getValue(history[i]) - minValue) /
                 (maxValue - minValue);
 
             DrawLineEx(
@@ -100,21 +94,112 @@ void drawSeries(
             );
             prev_idx = i;
             
-            if (i == values.size() - 1) break;
+            if (i == history.size() - 1) break;
         }
     };
 
-    drawLineForValues(valuesA, colorA);
-    if (valuesB != nullptr && valuesB->size() == history.size()) {
-        drawLineForValues(*valuesB, colorB);
-    }
+    drawLineForValues(getValueA, colorA);
+    drawLineForValues(getValueB, colorB);
 
     const std::string maxText = TextFormat("max %.1f", maxValue);
     const std::string minText = TextFormat("min %.1f", minValue);
     DrawText(maxText.c_str(), right - 90.0f, area.y + 6.0f, 14, DARKGRAY);
     DrawText(minText.c_str(), right - 90.0f, area.y + area.height - 18.0f, 14, DARKGRAY);
 }
-}  // namespace
+
+template<typename GetterA>
+void drawSeries(
+    const std::vector<SimulationStats>& history,
+    Rectangle area,
+    GetterA getValueA,
+    Color colorA,
+    const char* labelA
+) {
+    DrawRectangleRounded(
+        area,
+        simulation_config::graphs::chart_roundness,
+        simulation_config::graphs::chart_round_segments,
+        Color{245, 245, 245, 255}
+    );
+    DrawRectangleLinesEx(
+        area,
+        simulation_config::graphs::chart_outline_thickness,
+        LIGHTGRAY
+    );
+
+    if (history.size() < 2) {
+        DrawText(
+            "Not enough data",
+            area.x + 10,
+            area.y + 10,
+            simulation_config::graphs::text_font_size,
+            GRAY
+        );
+        return;
+    }
+
+    float minValue = getValueA(history.front());
+    float maxValue = getValueA(history.front());
+
+    for (const auto& stats : history) {
+        float valA = getValueA(stats);
+        minValue = std::min(minValue, valA);
+        maxValue = std::max(maxValue, valA);
+    }
+
+    if (std::fabs(maxValue - minValue) < simulation_config::graphs::chart_span_epsilon) {
+        maxValue = minValue + simulation_config::graphs::chart_min_span;
+    }
+
+    const float left = area.x + 10.0f;
+    const float right = area.x + area.width - 10.0f;
+    const float top = area.y + 28.0f;
+    const float bottom = area.y + area.height - 16.0f;
+    const float graphWidth = right - left;
+    const float graphHeight = bottom - top;
+
+    DrawText(labelA, left, area.y + 6.0f, 14, colorA);
+
+    DrawLine(left, bottom, right, bottom, GRAY);
+    DrawLine(left, top, left, bottom, GRAY);
+
+    auto drawLineForValues = [&](auto getValue, Color color) {
+        size_t step = std::max<size_t>(1, history.size() / static_cast<size_t>(graphWidth));
+        size_t prev_idx = 0;
+        for (size_t i = step; i < history.size(); i += step) {
+            if (i + step >= history.size()) {
+                i = history.size() - 1; // ensure we draw the last point
+            }
+            const float prevX = left + graphWidth * static_cast<float>(prev_idx) /
+                static_cast<float>(history.size() - 1);
+            const float nextX = left + graphWidth * static_cast<float>(i) /
+                static_cast<float>(history.size() - 1);
+
+            const float prevY = bottom - graphHeight * (getValue(history[prev_idx]) - minValue) /
+                (maxValue - minValue);
+            const float nextY = bottom - graphHeight * (getValue(history[i]) - minValue) /
+                (maxValue - minValue);
+
+            DrawLineEx(
+                Vector2{prevX, prevY},
+                Vector2{nextX, nextY},
+                simulation_config::graphs::chart_line_thickness,
+                color
+            );
+            prev_idx = i;
+            
+            if (i == history.size() - 1) break;
+        }
+    };
+
+    drawLineForValues(getValueA, colorA);
+
+    const std::string maxText = TextFormat("max %.1f", maxValue);
+    const std::string minText = TextFormat("min %.1f", minValue);
+    DrawText(maxText.c_str(), right - 90.0f, area.y + 6.0f, 14, DARKGRAY);
+    DrawText(minText.c_str(), right - 90.0f, area.y + area.height - 18.0f, 14, DARKGRAY);
+}
+} // namespace
 
 CsvStatsRecorder::CsvStatsRecorder(const std::string& path)
     : csv(path) {
@@ -261,35 +346,6 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
         DARKGREEN
     );
 
-    std::vector<float> liveCells;
-    std::vector<float> deadCells;
-    std::vector<float> totalFood;
-    std::vector<float> avgFood;
-    std::vector<float> maxHeight;
-    std::vector<float> avgAntibiotic;
-    std::vector<float> maxAntibiotic;
-    std::vector<float> avgBiomass;
-
-    liveCells.reserve(history.size());
-    deadCells.reserve(history.size());
-    totalFood.reserve(history.size());
-    avgFood.reserve(history.size());
-    maxHeight.reserve(history.size());
-    avgAntibiotic.reserve(history.size());
-    maxAntibiotic.reserve(history.size());
-    avgBiomass.reserve(history.size());
-
-    for (const SimulationStats& stats : history) {
-        liveCells.push_back(static_cast<float>(stats.liveCells));
-        deadCells.push_back(static_cast<float>(stats.deadCells));
-        totalFood.push_back(stats.totalFood);
-        avgFood.push_back(stats.avgFood);
-        maxHeight.push_back(static_cast<float>(stats.maxHeight));
-        avgAntibiotic.push_back(stats.avgAntibiotic);
-        maxAntibiotic.push_back(stats.maxAntibiotic);
-        avgBiomass.push_back(stats.avgBiomass);
-    }
-
     const int chartsTop = y + simulation_config::graphs::header_bottom;
     const int chartsHeight = height - simulation_config::graphs::header_bottom -
         simulation_config::graphs::panel_padding - 16; // 16 for extra header line
@@ -304,10 +360,10 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
             static_cast<float>(chartWidth),
             static_cast<float>(chartHeight)
         },
-        liveCells,
+        [](const SimulationStats& s) { return static_cast<float>(s.liveCells); },
         GREEN,
         "Live",
-        &deadCells,
+        [](const SimulationStats& s) { return static_cast<float>(s.deadCells); },
         RED,
         "Dead"
     );
@@ -319,7 +375,7 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
             static_cast<float>(chartWidth),
             static_cast<float>(chartHeight)
         },
-        totalFood,
+        [](const SimulationStats& s) { return s.totalFood; },
         BROWN,
         "Total food"
     );
@@ -333,7 +389,7 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
             static_cast<float>(chartWidth),
             static_cast<float>(chartHeight)
         },
-        avgFood,
+        [](const SimulationStats& s) { return s.avgFood; },
         ORANGE,
         "Avg food"
     );
@@ -347,7 +403,7 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
             static_cast<float>(chartWidth),
             static_cast<float>(chartHeight)
         },
-        maxHeight,
+        [](const SimulationStats& s) { return static_cast<float>(s.maxHeight); },
         BLUE,
         "Max height"
     );
@@ -361,10 +417,10 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
             static_cast<float>(chartWidth),
             static_cast<float>(chartHeight)
         },
-        avgAntibiotic,
+        [](const SimulationStats& s) { return s.avgAntibiotic; },
         DARKBLUE,
         "Avg antibiotic",
-        &maxAntibiotic,
+        [](const SimulationStats& s) { return s.maxAntibiotic; },
         VIOLET,
         "Max antibiotic"
     );
@@ -378,7 +434,7 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
             static_cast<float>(chartWidth),
             static_cast<float>(chartHeight)
         },
-        avgBiomass,
+        [](const SimulationStats& s) { return s.avgBiomass; },
         DARKGREEN,
         "Avg biomass"
     );

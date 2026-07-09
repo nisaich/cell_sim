@@ -101,10 +101,15 @@ void drawSeries(
     drawLineForValues(getValueA, colorA);
     drawLineForValues(getValueB, colorB);
 
+    float nowValueA = getValueA(history.back());
+    float nowValueB = getValueB(history.back());
+
     const std::string maxText = TextFormat("max %.1f", maxValue);
     const std::string minText = TextFormat("min %.1f", minValue);
+    const std::string nowText = TextFormat("now %.1f / %.1f", nowValueA, nowValueB);
     DrawText(maxText.c_str(), right - 90.0f, area.y + 6.0f, 14, DARKGRAY);
     DrawText(minText.c_str(), right - 90.0f, area.y + area.height - 18.0f, 14, DARKGRAY);
+    DrawText(nowText.c_str(), right - 220.0f, area.y + 6.0f, 14, DARKGRAY);
 }
 
 template<typename GetterA>
@@ -194,10 +199,14 @@ void drawSeries(
 
     drawLineForValues(getValueA, colorA);
 
+    float nowValueA = getValueA(history.back());
+
     const std::string maxText = TextFormat("max %.1f", maxValue);
     const std::string minText = TextFormat("min %.1f", minValue);
+    const std::string nowText = TextFormat("now %.1f", nowValueA);
     DrawText(maxText.c_str(), right - 90.0f, area.y + 6.0f, 14, DARKGRAY);
     DrawText(minText.c_str(), right - 90.0f, area.y + area.height - 18.0f, 14, DARKGRAY);
+    DrawText(nowText.c_str(), right - 220.0f, area.y + 6.0f, 14, DARKGRAY);
 }
 } // namespace
 

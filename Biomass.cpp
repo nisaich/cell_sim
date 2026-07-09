@@ -117,7 +117,7 @@ void active_Biomass::consume_and_decay(Food& food) {
         if (excess > 0.0f) {
             static std::mt19937 gen(std::random_device{}());
             std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-            float chance = std::min(excess * 0.01f, simulation_config::antibiotic::stress_transition_chance);
+            float chance = std::min(excess * 0.01f, static_cast<float>(simulation_config::antibiotic::stress_transition_chance));
             if (dist(gen) < chance) {
                 auto nonactive = std::make_shared<nonactive_Biomass>();
                 copy_common_state_to(*nonactive);
@@ -142,7 +142,7 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
         float conc = nucleus->get_antibiotic().get_concentration();
         float excess = conc - level_of_resistance;
         if (excess > 0.0f) {
-            float penalty = std::min(excess * 0.1f, simulation_config::antibiotic::reproduction_penalty);
+            float penalty = std::min(excess * 0.1f, static_cast<float>(simulation_config::antibiotic::reproduction_penalty));
             current_chance *= (1.0f - penalty);
         }
     }

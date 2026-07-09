@@ -245,7 +245,7 @@ public:
             Color base = getBaseColor();
             // Яркость зависит от концентрации антибиотика (нормируем)
             float conc = std::clamp(
-                antibiotic / simulation_config::antibiotic::visualization_normalizer,
+                static_cast<float>(antibiotic / simulation_config::antibiotic::visualization_normalizer),
                 0.0f,
                 1.0f
             );
@@ -257,7 +257,7 @@ public:
         else {
             // Пустая клетка – показываем концентрацию антибиотика в синих тонах
             float conc = std::clamp(
-                antibiotic / simulation_config::antibiotic::visualization_normalizer,
+                static_cast<float>(antibiotic / simulation_config::antibiotic::visualization_normalizer),
                 0.0f,
                 1.0f
             );
@@ -326,18 +326,18 @@ protected:
 
         auto environment = nucleus.situation_in_the_environment();
 
-        float foodInEnvironment = environment.first;
+        double foodInEnvironment = environment.first;
         float antibioticInEnvironment = environment.second;
 
         float nutrition = std::clamp(
-            foodInEnvironment / simulation_config::visualization::modified_nutrition_normalizer,
+            static_cast<float>(foodInEnvironment / simulation_config::visualization::modified_nutrition_normalizer),
             0.0f,
             1.0f
         );
         float antibiotic = std::clamp(
             antibioticInEnvironment,
             0.0f,
-            simulation_config::antibiotic::visualization_normalizer
+            static_cast<float>(simulation_config::antibiotic::visualization_normalizer)
         );
 
         float resistance = 0.0f;

@@ -3,92 +3,100 @@
 namespace simulation_config {
 
     namespace field {
-        inline constexpr int width = 100;
-        inline constexpr int height = 200;
-        inline constexpr float initial_food = 2000.0f;           // умеренно
-        inline constexpr float default_initial_food = 0.0f;
-        inline constexpr float food_diffusion_coeff = 0.04f;   // медленная диффузия – сохраняем градиент
-        inline constexpr int steps_for_adding_food = 10000;       // каждые 50 шагов
-        inline constexpr int count_of_adding_food = 0;        // достаточно для градиента
+        // 1 ячейка = 1 мкм. 1000x1000 ячеек = 1 мм x 1 мм.
+        // Это физически достоверно для Pseudomonas aeruginosa (размер клетки ~1-2 мкм)
+        // и обеспечивает идеальную производительность в 60 FPS на C++.
+        inline constexpr int width = 1000;
+        inline constexpr int height = 1000;
+
+        // Начальная концентрация глюкозы в среде.
+        // Для активного роста в закрытой колбе/чашке Петри используем 3.0 г/л = 3 000 000 мкг/л.
+        // При такой концентрации бактерии смогут делиться многократно.
+        inline constexpr double initial_food = 3000000.0;
+        inline constexpr double default_initial_food = 0.0;
+        inline constexpr double food_diffusion_coeff = 0.20;   // Быстрая диффузия для адекватного перераспределения
+        inline constexpr int steps_for_adding_food = 10000;
+        inline constexpr double count_of_adding_food = 0.0;
     }
 
     namespace colony {
-        // Эти параметры больше не используются (задаём в main.cpp)
-        inline constexpr int initial_cells_start_x = 0;
-        inline constexpr int initial_cells_count = 0;
-        inline constexpr int initial_cells_y_from_bottom = 1;
+        inline constexpr int initial_cells_start_x = field::width / 2;
+        inline constexpr int initial_cells_count = 10;
+        inline constexpr int initial_cells_y_from_bottom = 10;
     }
 
     namespace biomass {
-        inline constexpr float dispersion_chance = 0.01f;      // редкие прыжки
-        inline constexpr int dispersion_radius = 10;
-        inline constexpr int steps_for_activating = 13500;
+        inline constexpr double dispersion_chance = 0.01;
+        inline constexpr int dispersion_radius = 5;
+        inline constexpr int steps_for_activating = 5000;
         inline constexpr int max_count_reps = 10000;
-        inline constexpr float initial_biomass = 0.5f;
-        inline constexpr float max_biomass = 1.0f;
-        inline constexpr int default_max_age = 10000000;
-        inline constexpr float default_resistance = 0.0f;
-        inline constexpr float reproduction_min_biomass = 0.8f;
-        inline constexpr float child_biomass_ratio = 0.5f;
-        inline constexpr float nonactive_resistance_multiplier = 2.0f;
-        inline constexpr float nonactive_max_life_multiplier = 100.0f;
-        inline constexpr int dead_steps_to_disappearance = 10000;
+        inline constexpr double initial_biomass = 0.5;
+        inline constexpr double max_biomass = 1.0;
+        inline constexpr double child_biomass_ratio = 0.5;     // Деление строго пополам
+        inline constexpr double reproduction_min_biomass = 0.7; // Минимальная биомасса для деления
+        inline constexpr int default_max_age = 1000000;
+        inline constexpr double default_resistance = 0.0;
+
+        // Параметры спящего состояния (дормантность)
+        inline constexpr double nonactive_resistance_multiplier = 2.0; // Спящие клетки устойчивее
+        inline constexpr double nonactive_max_life_multiplier = 2.0;   // Спящие клетки живут дольше
+        inline constexpr int dead_steps_to_disappearance = 100;        // Через сколько шагов исчезает мёртвая клетка
+    }
+
+    namespace monod {
+        // Один тик симуляции равен ровно 1.0 секунде!
+        inline constexpr double delta_t = 1.0;
+
+        // --- ПАРАМЕТРЫ РОСТА ДЛЯ PSEUDOMONAS AERUGINOSA (комнатная температура ~22°C) ---
+        // Переводим часовые константы биодеградации и роста в секундные (делением на 3600)
+        inline constexpr double U_max = 0.48 / 3600.0;         // ~1.33e-4 c^-1 (максимальная скорость поглощения)
+        inline constexpr double m_act = 0.048 / 3600.0;        // ~1.33e-5 c^-1 (расход активной клетки)
+        inline constexpr double m_inactiv = 0.000048 / 3600.0; // ~1.33e-8 c^-1 (расход спящей клетки, в 1000 раз меньше)
+
+        inline constexpr double K_F = 1500.0;                  // Полунасыщение глюкозы для Pseudomonas (мкг/л)
+        inline constexpr double Y_B_F = 0.45;                  // Коэффициент выхода биомассы (Yield)
+
+        inline constexpr double starvation_biomass_threshold = 0.2; // Порог биомассы для засыпания
+        inline constexpr double greed_coefficient = 1.3;       // Насколько потенциальный доход должен превышать расходы для пробуждения
+        inline constexpr int steps_for_waking_up = 3600;       // Время реактивации в секундах (1 час = 3600 секунд)
+
+        // --- ФИЗИЧЕСКИЙ СКЕЙЛИНГ ЕДЫ В БИОМАССУ ---
+        inline constexpr double food_to_biomass_scale = 3.03e-6;
     }
 
     namespace antibiotic {
-        inline constexpr float diffusion_coeff = 0.22f;
-        inline constexpr float adding_concentration = 0.0f;
-        inline constexpr int adding_interval = 20;
-        inline constexpr float visualization_normalizer = 5.0f;
-        inline constexpr float death_threshold = 0.1f;
-        inline constexpr float death_probability_factor = 0.05f;
-        inline constexpr float reproduction_penalty = 0.5f;
-        inline constexpr float stress_transition_chance = 0.02f;
-        inline constexpr float decay_rate = 0.00015f;
-    }
+        inline constexpr double death_threshold = 0.5;
+        inline constexpr double death_probability_factor = 0.1; // Вероятность гибели при превышении порога
+        inline constexpr double reproduction_penalty = 0.5;
+        inline constexpr double stress_transition_chance = 0.05; // Вероятность перехода в спящее состояние из-за стресса
 
-    // у нас Pseudomonas aeruginosa и вся эта хрень какбы лежит в жидкой глюкозе
-    namespace monod {
-      inline constexpr double U_max = 0.0000004167;
-      inline constexpr double K_F = 3.68;
-      inline constexpr double delta_t = 1.0; 
-      inline constexpr double Y_B_F = 0.55;
-      inline constexpr double m_act = 0.000000694;
-      inline constexpr double m_inactiv = 0.000000004;
-      inline constexpr double starvation_biomass_threshold = 0.2;
-      inline constexpr double greed_coefficient = 5.0;
-      inline constexpr int steps_for_waking_up = 50;
-    }
+        // Диффузия антибиотика
+        inline constexpr double diffusion_coeff = 0.1;
+        inline constexpr double decay_rate = 0.001;             // Деградация антибиотика за шаг
 
-    namespace graphs {
-        inline constexpr int panel_padding = 12;
-        inline constexpr int section_gap = 10;
-        inline constexpr int title_font_size = 20;
-        inline constexpr int text_font_size = 16;
-        inline constexpr float chart_roundness = 0.08f;
-        inline constexpr int chart_round_segments = 8;
-        inline constexpr float chart_outline_thickness = 1.0f;
-        inline constexpr float chart_line_thickness = 2.0f;
-        inline constexpr float chart_min_span = 1.0f;
-        inline constexpr float chart_span_epsilon = 0.001f;
-        inline constexpr int header_bottom = 104;
+        // Добавление антибиотика
+        inline constexpr int adding_interval = 1000000;         // Очень редко (фактически — никогда по умолчанию)
+        inline constexpr double adding_concentration = 0.0;
+        inline constexpr double visualization_normalizer = 1.0; // Нормировка для отображения концентрации
     }
 
     namespace visualization {
-        inline constexpr int number_of_step_to_diffuse = 1;
-        inline constexpr const char* default_color_mode = "nutrition";
-        inline constexpr int initial_window_width = 800;
-        inline constexpr int initial_window_height = 600;
-        inline constexpr int graph_panel_width = 420;
-        inline constexpr int outer_margin = 20;
-        inline constexpr int modified_window_screen_margin = 100;
+        inline constexpr int initial_window_width = 1200;
+        inline constexpr int initial_window_height = 900;
+        inline constexpr int screen_width = 1000;
+        inline constexpr int screen_height = 1000;
+        inline constexpr int target_fps = 60;
+        inline constexpr int steps_per_frame = 20;              // Количество шагов симуляции за один кадр отрисовки
+
+        inline constexpr int graph_panel_width = 400;
         inline constexpr int modified_content_gap = 20;
-        inline constexpr int target_fps = 0;
-        inline constexpr int steps_per_frame = 200;          // Количество шагов симуляции за один кадр отрисовки для ускорения
-        inline constexpr float min_brightness = 0.35f;
-        inline constexpr float brightness_span = 0.65f;
-        inline constexpr float standard_nutrition_normalizer = field::initial_food * 0.25;
-        inline constexpr float modified_nutrition_normalizer = 2.0f;
+        inline constexpr int modified_window_screen_margin = 100;
+        inline constexpr int number_of_step_to_diffuse = 1;    // Диффузия каждый шаг
+
+        inline constexpr double min_brightness = 0.35;
+        inline constexpr double brightness_span = 0.65;
+        inline constexpr double standard_nutrition_normalizer = field::initial_food * 0.25;
+        inline constexpr double modified_nutrition_normalizer = 2.0;
 
         inline constexpr unsigned char empty_cell_blue_r = 0;
         inline constexpr unsigned char empty_cell_blue_g = 100;
@@ -113,8 +121,26 @@ namespace simulation_config {
         inline constexpr int legend_x = 10;
         inline constexpr int legend_y = 10;
         inline constexpr int legend_width = 18;
-        inline constexpr int legend_height = 140;
-        inline constexpr int legend_font_size = 14;
+        inline constexpr int legend_height = 18;
+        inline constexpr int legend_spacing = 6;
+        inline constexpr int legend_font_size = 15;
+
+        // Режим цвета по умолчанию: "standard", "age", "resistance", "nutrition", "antibiotic"
+        inline constexpr const char* default_color_mode = "standard";
     }
 
-} // namespace simulation_config
+    namespace graphs {
+        inline constexpr float chart_roundness = 0.05f;
+        inline constexpr int chart_round_segments = 4;
+        inline constexpr float chart_outline_thickness = 1.0f;
+        inline constexpr float chart_line_thickness = 1.5f;
+        inline constexpr float chart_span_epsilon = 1e-6f;
+        inline constexpr float chart_min_span = 1.0f;
+        inline constexpr int text_font_size = 12;
+        inline constexpr int title_font_size = 14;
+        inline constexpr int outer_margin = 20;
+        inline constexpr int panel_padding = 12;
+        inline constexpr int header_bottom = 160; // высота заголовка панели
+        inline constexpr int section_gap = 8;     // отступ между графиками
+    }
+}

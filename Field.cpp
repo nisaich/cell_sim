@@ -80,7 +80,6 @@ void Field::init_environment(float initial_food) {
 }
 
 void Field::add_some_food(int count_of_adding_food) {
-    // Точечный источник в центре верхней строки
     int center = width / 2;
     get_nucleus(center, 0).get_food().add(count_of_adding_food);
 }

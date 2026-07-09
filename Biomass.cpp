@@ -149,21 +149,24 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
         if (chance_distribution(generator) > current_chance) return false;
     }
 
-    // ---- ВЫБОР СОСЕДА ПО КОЛИЧЕСТВУ ПИЩИ (БЕЗ УКЛОНА) ----
-    std::vector<std::pair<float, Cell*>> scored;
+    // ---- ВЫБОР СОСЕДА ПО ПИЩЕ (БЕЗ УКЛОНА) ----
+    float max_food = -1.0f;
     for (Cell* nb : free_neighbours) {
-        float food = nb->get_food().get_amount();
-        scored.push_back({ food, nb });
+        max_food = std::max(max_food, nb->get_food().get_amount());
     }
 
-    std::sort(scored.begin(), scored.end(),
-        [](const auto& a, const auto& b) { return a.first > b.first; });
-
+    float threshold = max_food * simulation_config::biomass::lateral_growth_tolerance;
     std::vector<Cell*> candidates;
-    size_t topN = std::min(size_t(3), scored.size());
-    for (size_t i = 0; i < topN; ++i) {
-        candidates.push_back(scored[i].second);
+    for (Cell* nb : free_neighbours) {
+        if (nb->get_food().get_amount() >= threshold) {
+            candidates.push_back(nb);
+        }
     }
+
+    if (candidates.empty()) {
+        candidates = free_neighbours;
+    }
+
     std::uniform_int_distribution<size_t> dist(0, candidates.size() - 1);
     Cell* place_for_child = candidates[dist(generator)];
     // -------------------------------------------------
@@ -223,7 +226,6 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     place_for_child->set_cell(child);
     return true;
 }
-
 // ---------- nonactive_Biomass ----------
 nonactive_Biomass::nonactive_Biomass(float resistance, int max_age) {
     level_of_resistance = resistance * resistance_multiplier;

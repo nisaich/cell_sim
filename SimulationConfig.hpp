@@ -5,22 +5,21 @@ namespace simulation_config {
     namespace field {
         inline constexpr int width = 200;
         inline constexpr int height = 200;
-        inline constexpr float initial_food = 2.0f;           // умеренно
+        inline constexpr float initial_food = 3.0f;
         inline constexpr float default_initial_food = 0.0f;
-        inline constexpr float food_diffusion_coeff = 0.04f;   // медленная диффузия – сохраняем градиент
-        inline constexpr int steps_for_adding_food = 50;       // каждые 50 шагов
-        inline constexpr int count_of_adding_food = 80;        // достаточно для градиента
+        inline constexpr float food_diffusion_coeff = 0.02f;   // медленная диффузия
+        inline constexpr int steps_for_adding_food = 50;
+        inline constexpr int count_of_adding_food = 50;        // меньше пищи
     }
 
     namespace colony {
-        // Эти параметры больше не используются (задаём в main.cpp)
         inline constexpr int initial_cells_start_x = 0;
         inline constexpr int initial_cells_count = 0;
         inline constexpr int initial_cells_y_from_bottom = 1;
     }
 
     namespace biomass {
-        inline constexpr float dispersion_chance = 0.01f;      // редкие прыжки
+        inline constexpr float dispersion_chance = 0.01f;
         inline constexpr int dispersion_radius = 10;
         inline constexpr int steps_for_activating = 13500;
         inline constexpr int max_count_reps = 10000;
@@ -33,6 +32,8 @@ namespace simulation_config {
         inline constexpr float nonactive_resistance_multiplier = 2.0f;
         inline constexpr float nonactive_max_life_multiplier = 100.0f;
         inline constexpr int dead_steps_to_disappearance = 10000;
+
+        inline constexpr float lateral_growth_tolerance = 0.7f;
     }
 
     namespace antibiotic {
@@ -49,7 +50,7 @@ namespace simulation_config {
 
     namespace monod {
         inline constexpr float U_max = 0.002f;
-        inline constexpr float K_F = 2.0f;                   // насыщение при 2.0
+        inline constexpr float K_F = 2.0f;
         inline constexpr float delta_t = 5.0f;
         inline constexpr float Y_B_F = 0.5f;
         inline constexpr float m_act = 0.0002f;

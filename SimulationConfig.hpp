@@ -84,6 +84,7 @@ namespace simulation_config {
         inline constexpr int modified_window_screen_margin = 100;
         inline constexpr int modified_content_gap = 20;
         inline constexpr int target_fps = 30;
+        inline constexpr int steps_per_frame = 20;          // Количество шагов симуляции за один кадр отрисовки для ускорения
         inline constexpr float min_brightness = 0.35f;
         inline constexpr float brightness_span = 0.65f;
         inline constexpr float standard_nutrition_normalizer = field::initial_food * 0.25;

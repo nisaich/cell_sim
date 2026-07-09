@@ -483,14 +483,18 @@ void visualize(
     statsHistory.record(simulation_field, tick);
 
     while (!WindowShouldClose()) {
-        if (simulation_field.has_living_cells()) {
-            simulation_field.make_one_step(tick);
-            ++tick;
+        for (int i = 0; i < simulation_config::visualization::steps_per_frame; ++i) {
+            if (simulation_field.has_living_cells()) {
+                simulation_field.make_one_step(tick);
+                ++tick;
 
-            if (statsRecorder.is_open()) {
-                statsRecorder.record(simulation_field, tick);
+                if (statsRecorder.is_open()) {
+                    statsRecorder.record(simulation_field, tick);
+                }
+                statsHistory.record(simulation_field, tick);
+            } else {
+                break;
             }
-            statsHistory.record(simulation_field, tick);
         }
 
         BeginDrawing();

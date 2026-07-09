@@ -5,7 +5,7 @@ namespace simulation_config {
     namespace field {
         inline constexpr int width = 100;
         inline constexpr int height = 200;
-        inline constexpr float initial_food = 2.0f;           // умеренно
+        inline constexpr float initial_food = 2000.0f;           // умеренно
         inline constexpr float default_initial_food = 0.0f;
         inline constexpr float food_diffusion_coeff = 0.04f;   // медленная диффузия – сохраняем градиент
         inline constexpr int steps_for_adding_food = 10000;       // каждые 50 шагов
@@ -47,17 +47,17 @@ namespace simulation_config {
         inline constexpr float decay_rate = 0.00015f;
     }
 
-    // у нас Pseudomonas aeruginosa
+    // у нас Pseudomonas aeruginosa и вся эта хрень какбы лежит в жидкой глюкозе
     namespace monod {
-        inline constexpr float U_max = 0.002f;
-        inline constexpr float K_F = 2.0f;                   // насыщение при 2.0
-        inline constexpr float delta_t = 5.0f;
-        inline constexpr float Y_B_F = 0.5f;
-        inline constexpr float m_act = 0.0002f;
-        inline constexpr float m_inactiv = 0.00002f;
-        inline constexpr float starvation_biomass_threshold = 0.2f;
-        inline constexpr float greed_coefficient = 1.5f;
-        inline constexpr int steps_for_waking_up = 50;
+      inline constexpr double U_max = 0.0000004167;
+      inline constexpr double K_F = 3.68;
+      inline constexpr double delta_t = 1.0; 
+      inline constexpr double Y_B_F = 0.55;
+      inline constexpr double m_act = 0.000000694;
+      inline constexpr double m_inactiv = 0.000000004;
+      inline constexpr double starvation_biomass_threshold = 0.2;
+      inline constexpr double greed_coefficient = 5.0;
+      inline constexpr int steps_for_waking_up = 50;
     }
 
     namespace graphs {
@@ -83,8 +83,8 @@ namespace simulation_config {
         inline constexpr int outer_margin = 20;
         inline constexpr int modified_window_screen_margin = 100;
         inline constexpr int modified_content_gap = 20;
-        inline constexpr int target_fps = 30;
-        inline constexpr int steps_per_frame = 20;          // Количество шагов симуляции за один кадр отрисовки для ускорения
+        inline constexpr int target_fps = 0;
+        inline constexpr int steps_per_frame = 200;          // Количество шагов симуляции за один кадр отрисовки для ускорения
         inline constexpr float min_brightness = 0.35f;
         inline constexpr float brightness_span = 0.65f;
         inline constexpr float standard_nutrition_normalizer = field::initial_food * 0.25;

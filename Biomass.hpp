@@ -54,7 +54,7 @@ public:
     bool reproduction(Field& current_field, int x, int y) override;
     void consume_and_decay(Food& food) override;
     float is_active_for_monod() const override { return 1.0f; }
-    float get_maintenance_rate() const override { return simulation_config::monod::m_act; }
+    float get_maintenance_rate() const override { return static_cast<float>(simulation_config::monod::m_act); }
 };
 
 class nonactive_Biomass : public abstract_Biomass {
@@ -73,7 +73,7 @@ public:
     bool reproduction(Field& current_field, int x, int y) override;
     
     float is_active_for_monod() const override { return 0.0f; }
-    float get_maintenance_rate() const override { return simulation_config::monod::m_inactiv; }
+    float get_maintenance_rate() const override { return static_cast<float>(simulation_config::monod::m_inactiv); }
 
     // Применяет коэффициенты дормантности (устойчивость/возраст/расход пищи)
     // к уже скопированному общему состоянию клетки. Вызывается сразу после

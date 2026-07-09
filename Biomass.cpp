@@ -66,21 +66,21 @@ void abstract_Biomass::consume_and_decay(Food& food) {
 
     float u = 0.0f;
     if (F > 0.0f) {
-        u = simulation_config::monod::U_max * (F / (simulation_config::monod::K_F + F)) * a;
+        u = static_cast<float>(simulation_config::monod::U_max) * (F / (static_cast<float>(simulation_config::monod::K_F) + F)) * a;
     }
 
-    float u_dt = u * simulation_config::monod::delta_t;
-    float space_limit = std::max(0.0f, (simulation_config::biomass::max_biomass - biomass) / simulation_config::monod::Y_B_F);
+    float u_dt = u * static_cast<float>(simulation_config::monod::delta_t);
+    float space_limit = std::max(0.0f, (simulation_config::biomass::max_biomass - biomass) / static_cast<float>(simulation_config::monod::Y_B_F));
 
     float delta_Food = std::min({ F, u_dt, space_limit });
     if (delta_Food < 0.0f) delta_Food = 0.0f;
 
     food.take(delta_Food);
 
-    biomass += simulation_config::monod::Y_B_F * delta_Food;
+    biomass += static_cast<float>(simulation_config::monod::Y_B_F) * delta_Food;
 
     float m = get_maintenance_rate();
-    biomass = std::max(0.0f, biomass * (1.0f - m * simulation_config::monod::delta_t));
+    biomass = std::max(0.0f, biomass * (1.0f - m * static_cast<float>(simulation_config::monod::delta_t)));
 }
 
 bool abstract_Biomass::reproduction(Field& current_field, int x, int y) {
@@ -101,7 +101,7 @@ void active_Biomass::consume_and_decay(Food& food) {
     abstract_Biomass::consume_and_decay(food);
     steps_active++;
 
-    if (nucleus != nullptr && biomass < simulation_config::monod::starvation_biomass_threshold) {
+    if (nucleus != nullptr && biomass < static_cast<float>(simulation_config::monod::starvation_biomass_threshold)) {
         if (steps_active >= simulation_config::monod::steps_for_waking_up) {
             auto nonactive = std::make_shared<nonactive_Biomass>();
             copy_common_state_to(*nonactive);
@@ -245,9 +245,9 @@ bool nonactive_Biomass::reproduction(Field& current_field, int x, int y) {
     }
     else {
         float F = nucleus.get_food().get_amount();
-        float potential_income = simulation_config::monod::Y_B_F *
-            (simulation_config::monod::U_max * F / (simulation_config::monod::K_F + F) * simulation_config::monod::delta_t);
-        float threshold = simulation_config::monod::m_act * simulation_config::monod::delta_t * biomass * simulation_config::monod::greed_coefficient;
+        float potential_income = static_cast<float>(simulation_config::monod::Y_B_F) *
+            (static_cast<float>(simulation_config::monod::U_max) * F / (static_cast<float>(simulation_config::monod::K_F) + F) * static_cast<float>(simulation_config::monod::delta_t));
+        float threshold = static_cast<float>(simulation_config::monod::m_act) * static_cast<float>(simulation_config::monod::delta_t) * biomass * static_cast<float>(simulation_config::monod::greed_coefficient);
 
         if (potential_income > threshold) {
             steps_until_wakeup = simulation_config::monod::steps_for_waking_up;

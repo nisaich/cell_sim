@@ -19,18 +19,25 @@
 #include <cstdlib>
 
 namespace {
-    std::vector<double> tick_times;
+    std::chrono::high_resolution_clock::time_point start_simulation_time;
+    long long total_ticks_counter = 0;
 
     void print_average_tick_time() {
-        if (tick_times.empty()) {
-            std::cout << "\nNo simulation ticks calculated yet.\n" << std::endl;
-            return;
-        }
-        double sum = std::accumulate(tick_times.begin(), tick_times.end(), 0.0);
-        double avg = sum / tick_times.size();
+        auto end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> total_duration = end_time - start_simulation_time;
+        double elapsed_seconds = total_duration.count();
+
         std::cout << "\n--- Simulation Performance Statistics ---" << std::endl;
-        std::cout << "Total ticks: " << tick_times.size() << std::endl;
-        std::cout << "Average time per tick: " << (avg * 1000.0) << " ms" << std::endl;
+        std::cout << "Total elapsed time: " << elapsed_seconds << " seconds" << std::endl;
+        std::cout << "Total simulation ticks: " << total_ticks_counter << std::endl;
+        if (total_ticks_counter > 0 && elapsed_seconds > 0.0) {
+            double avg_ms = (elapsed_seconds / total_ticks_counter) * 1000.0;
+            double ticks_per_sec = total_ticks_counter / elapsed_seconds;
+            std::cout << "Average time per tick (end-to-end): " << avg_ms << " ms" << std::endl;
+            std::cout << "Effective tick rate: " << ticks_per_sec << " ticks/second" << std::endl;
+        } else {
+            std::cout << "No simulation ticks calculated yet." << std::endl;
+        }
     }
 
     void sigint_handler(int signal) {
@@ -510,16 +517,15 @@ void visualize(
     }
     statsHistory.record(simulation_field, tick);
 
+    start_simulation_time = std::chrono::high_resolution_clock::now();
+    total_ticks_counter = 0;
+
     while (!WindowShouldClose()) {
         for (int i = 0; i < simulation_config::visualization::steps_per_frame; ++i) {
             if (simulation_field.has_living_cells()) {
-                auto start_time = std::chrono::high_resolution_clock::now();
                 simulation_field.make_one_step(tick);
-                auto end_time = std::chrono::high_resolution_clock::now();
-                std::chrono::duration<double> tick_duration = end_time - start_time;
-                tick_times.push_back(tick_duration.count());
-
                 ++tick;
+                ++total_ticks_counter;
             } else {
                 break;
             }

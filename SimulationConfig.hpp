@@ -2,10 +2,32 @@
 
 namespace simulation_config {
 
+
+    //у нас микроб:pseudomonas putida, чтоб никто не забывал
+    namespace monod {
+        // Один тик симуляции равен ровно 1.0 секунде!
+        inline constexpr double delta_t = 60.0;
+
+        // --- ПАРАМЕТРЫ РОСТА ДЛЯ PSEUDOMONAS AERUGINOSA (комнатная температура ~22°C) ---
+        // Переводим часовые константы биодеградации и роста в секундные (делением на 3600)
+        inline constexpr double U_max = 0.48 / 3600.0;         // ~1.33e-4 c^-1 (максимальная скорость поглощения)
+        inline constexpr double m_act = 0.048 / 3600.0;        // ~1.33e-5 c^-1 (расход активной клетки)
+        inline constexpr double m_inactiv = 0.000048 / 3600.0; // ~1.33e-8 c^-1 (расход спящей клетки, в 1000 раз меньше)
+
+        inline constexpr double K_F = 1500.0;                  // Полунасыщение глюкозы для Pseudomonas (мкг/л)
+        inline constexpr double Y_B_F = 0.45;                  // Коэффициент выхода биомассы (Yield)
+
+        inline constexpr double starvation_biomass_threshold = 0.2; // Порог биомассы для засыпания
+        inline constexpr double greed_coefficient = 1.3;       // Насколько потенциальный доход должен превышать расходы для пробуждения
+        inline constexpr int steps_for_waking_up = 3600;       // Время реактивации в секундах (1 час = 3600 секунд)
+
+        // --- ФИЗИЧЕСКИЙ СКЕЙЛИНГ ЕДЫ В БИОМАССУ ---
+        inline constexpr double food_to_biomass_scale = 3.03e-6;
+    }
+
     namespace field {
         // 1 ячейка = 1 мкм. 1000x1000 ячеек = 1 мм x 1 мм.
         // Это физически достоверно для Pseudomonas aeruginosa (размер клетки ~1-2 мкм)
-        // и обеспечивает идеальную производительность в 60 FPS на C++.
         inline constexpr int width = 100;
         inline constexpr int height = 100;
 
@@ -14,9 +36,10 @@ namespace simulation_config {
         // При такой концентрации бактерии смогут делиться многократно.
         inline constexpr double initial_food = 300.0;
         inline constexpr double default_initial_food = 0.0;
-        inline constexpr double food_diffusion_coeff = 0.20;   // Быстрая диффузия для адекватного перераспределения
-        inline constexpr int steps_for_adding_food = 10000;
-        inline constexpr double count_of_adding_food = 0.0;
+        inline constexpr double D = 1.0 / 600.0; //используется в food_diffusion_coeff
+        inline constexpr double food_diffusion_coeff = 0.20;//field::D * monod::delta_t;   // Быстрая диффузия для адекватного перераспределения
+        inline constexpr int steps_for_adding_food = 1000;
+        inline constexpr double count_of_adding_food = 100000.0;
     }
 
     namespace colony {
@@ -41,27 +64,6 @@ namespace simulation_config {
         inline constexpr double nonactive_resistance_multiplier = 2.0; // Спящие клетки устойчивее
         inline constexpr double nonactive_max_life_multiplier = 2.0;   // Спящие клетки живут дольше
         inline constexpr int dead_steps_to_disappearance = 100;        // Через сколько шагов исчезает мёртвая клетка
-    }
-
-    namespace monod {
-        // Один тик симуляции равен ровно 1.0 секунде!
-        inline constexpr double delta_t = 1.0;
-
-        // --- ПАРАМЕТРЫ РОСТА ДЛЯ PSEUDOMONAS AERUGINOSA (комнатная температура ~22°C) ---
-        // Переводим часовые константы биодеградации и роста в секундные (делением на 3600)
-        inline constexpr double U_max = 0.48 / 3600.0;         // ~1.33e-4 c^-1 (максимальная скорость поглощения)
-        inline constexpr double m_act = 0.048 / 3600.0;        // ~1.33e-5 c^-1 (расход активной клетки)
-        inline constexpr double m_inactiv = 0.000048 / 3600.0; // ~1.33e-8 c^-1 (расход спящей клетки, в 1000 раз меньше)
-
-        inline constexpr double K_F = 1500.0;                  // Полунасыщение глюкозы для Pseudomonas (мкг/л)
-        inline constexpr double Y_B_F = 0.45;                  // Коэффициент выхода биомассы (Yield)
-
-        inline constexpr double starvation_biomass_threshold = 0.2; // Порог биомассы для засыпания
-        inline constexpr double greed_coefficient = 1.3;       // Насколько потенциальный доход должен превышать расходы для пробуждения
-        inline constexpr int steps_for_waking_up = 3600;       // Время реактивации в секундах (1 час = 3600 секунд)
-
-        // --- ФИЗИЧЕСКИЙ СКЕЙЛИНГ ЕДЫ В БИОМАССУ ---
-        inline constexpr double food_to_biomass_scale = 3.03e-6;
     }
 
     namespace antibiotic {
@@ -95,8 +97,8 @@ namespace simulation_config {
 
         inline constexpr double min_brightness = 0.35;
         inline constexpr double brightness_span = 0.65;
-        inline constexpr double standard_nutrition_normalizer = field::initial_food * 0.01;
-        inline constexpr double modified_nutrition_normalizer = field::initial_food;
+        inline constexpr double standard_nutrition_normalizer = 500; //field::initial_food * 0.01;
+        inline constexpr double modified_nutrition_normalizer = 500; //field::initial_food;
 
         inline constexpr unsigned char empty_cell_blue_r = 0;
         inline constexpr unsigned char empty_cell_blue_g = 100;

@@ -91,57 +91,153 @@ void Field::add_antibiotic(float concentration, int x, int y) {
     }
 }
 
-void Field::diffuse_food() {
-    std::vector<std::vector<double>> new_food(height, std::vector<double>(width, 0.0));
+static void diffuse_grid_adi(std::vector<std::vector<double>>& grid, double D, double dt, double decay_rate = 0.0) {
+    int height = grid.size();
+    if (height == 0) return;
+    int width = grid[0].size();
+    if (width == 0) return;
 
-#pragma omp parallel for collapse(2) schedule(static)
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            double current = get_nucleus(x, y).get_food().get_amount();
-            double sum_neighbors = 0.0;
-            for (Cell* nb : get_neighbours(x, y)) {
-                sum_neighbors += nb->get_food().get_amount();
+    double r = D * dt / 2.0;
+    if (r <= 0.0) return;
+
+    // Промежуточная сетка для первого полушага
+    std::vector<std::vector<double>> temp(height, std::vector<double>(width, 0.0));
+
+    // Предвычисление c_prime по ширине (X)
+    std::vector<double> c_prime_x(width);
+    c_prime_x[0] = -r / (1.0 + r);
+    for (int i = 1; i < width - 1; ++i) {
+        double denom = (1.0 + 2.0 * r) + r * c_prime_x[i - 1];
+        c_prime_x[i] = -r / denom;
+    }
+
+    // Предвычисление c_prime по высоте (Y)
+    std::vector<double> c_prime_y(height);
+    c_prime_y[0] = -r / (1.0 + r);
+    for (int j = 1; j < height - 1; ++j) {
+        double denom = (1.0 + 2.0 * r) + r * c_prime_y[j - 1];
+        c_prime_y[j] = -r / denom;
+    }
+
+    // 1. ПЕРВЫЙ ПОЛУШАГ: Неявный по X, явный по Y
+#pragma omp parallel
+    {
+        std::vector<double> d_prime(width);
+#pragma omp for schedule(static)
+        for (int j = 0; j < height; ++j) {
+            std::vector<double> d(width);
+            for (int i = 0; i < width; ++i) {
+                double val_self = grid[j][i];
+                double val_up = (j > 0) ? grid[j - 1][i] : val_self;
+                double val_down = (j < height - 1) ? grid[j + 1][i] : val_self;
+                
+                d[i] = val_self + r * (val_up - 2.0 * val_self + val_down);
             }
-            double num_neighbors = static_cast<double>(get_neighbours(x, y).size());
-            double new_val = current + static_cast<double>(simulation_config::field::food_diffusion_coeff) *
-                (sum_neighbors - num_neighbors * current);
-            if (new_val < 0.0) new_val = 0.0;
-            new_food[y][x] = new_val;
+
+            d_prime[0] = d[0] / (1.0 + r);
+            for (int i = 1; i < width - 1; ++i) {
+                double denom = (1.0 + 2.0 * r) + r * c_prime_x[i - 1];
+                d_prime[i] = (d[i] + r * d_prime[i - 1]) / denom;
+            }
+            double denom_last = (1.0 + r) + r * c_prime_x[width - 2];
+            double d_prime_last = (d[width - 1] + r * d_prime[width - 2]) / denom_last;
+
+            temp[j][width - 1] = d_prime_last;
+            for (int i = width - 2; i >= 0; --i) {
+                temp[j][i] = d_prime[i] - c_prime_x[i] * temp[j][i + 1];
+            }
         }
     }
 
+    // 2. ВТОРОЙ ПОЛУШАГ: Явный по X, неявный по Y
+#pragma omp parallel
+    {
+        std::vector<double> d_prime(height);
+#pragma omp for schedule(static)
+        for (int i = 0; i < width; ++i) {
+            std::vector<double> d(height);
+            for (int j = 0; j < height; ++j) {
+                double val_self = temp[j][i];
+                double val_left = (i > 0) ? temp[j][i - 1] : val_self;
+                double val_right = (i < width - 1) ? temp[j][i + 1] : val_self;
+
+                d[j] = val_self + r * (val_left - 2.0 * val_self + val_right);
+            }
+
+            d_prime[0] = d[0] / (1.0 + r);
+            for (int j = 1; j < height - 1; ++j) {
+                double denom = (1.0 + 2.0 * r) + r * c_prime_y[j - 1];
+                d_prime[j] = (d[j] + r * d_prime[j - 1]) / denom;
+            }
+            double denom_last = (1.0 + r) + r * c_prime_y[height - 2];
+            double d_prime_last = (d[height - 1] + r * d_prime[height - 2]) / denom_last;
+
+            grid[height - 1][i] = d_prime_last;
+            for (int j = height - 2; j >= 0; --j) {
+                grid[j][i] = d_prime[j] - c_prime_y[j] * grid[j + 1][i];
+            }
+        }
+    }
+
+    // Применение коэффициента деградации и ограничение неотрицательности
+    if (decay_rate > 0.0) {
+        double decay_factor = 1.0 - decay_rate;
+#pragma omp parallel for collapse(2) schedule(static)
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                grid[y][x] *= decay_factor;
+                if (grid[y][x] < 0.0) grid[y][x] = 0.0;
+            }
+        }
+    } else {
+#pragma omp parallel for collapse(2) schedule(static)
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                if (grid[y][x] < 0.0) grid[y][x] = 0.0;
+            }
+        }
+    }
+}
+
+void Field::diffuse_food() {
+    std::vector<std::vector<double>> grid(height, std::vector<double>(width, 0.0));
 #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            get_nucleus(x, y).get_food().set_amount(new_food[y][x]);
+            grid[y][x] = get_nucleus(x, y).get_food().get_amount();
+        }
+    }
+
+    diffuse_grid_adi(grid, 
+                     simulation_config::field::food_diffusion_coeff, 
+                     simulation_config::monod::delta_t);
+
+#pragma omp parallel for collapse(2) schedule(static)
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            get_nucleus(x, y).get_food().set_amount(grid[y][x]);
         }
     }
 }
 
 void Field::diffuse_antibiotic() {
-    std::vector<std::vector<float>> new_antibiotic(height, std::vector<float>(width, 0.0f));
-
+    std::vector<std::vector<double>> grid(height, std::vector<double>(width, 0.0));
 #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            float current = get_nucleus(x, y).get_antibiotic().get_concentration();
-            float sum_neighbors = 0.0f;
-            for (Cell* nb : get_neighbours(x, y)) {
-                sum_neighbors += nb->get_antibiotic().get_concentration();
-            }
-            float num_neighbors = static_cast<float>(get_neighbours(x, y).size());
-            float new_val = current + simulation_config::antibiotic::diffusion_coeff *
-                (sum_neighbors - num_neighbors * current);
-            new_val *= (1.0f - simulation_config::antibiotic::decay_rate);
-            if (new_val < 0.0f) new_val = 0.0f;
-            new_antibiotic[y][x] = new_val;
+            grid[y][x] = get_nucleus(x, y).get_antibiotic().get_concentration();
         }
     }
 
+    diffuse_grid_adi(grid, 
+                     simulation_config::antibiotic::diffusion_coeff, 
+                     simulation_config::monod::delta_t,
+                     simulation_config::antibiotic::decay_rate);
+
 #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            get_nucleus(x, y).get_antibiotic().set_concentration(new_antibiotic[y][x]);
+            get_nucleus(x, y).get_antibiotic().set_concentration(static_cast<float>(grid[y][x]));
         }
     }
 }

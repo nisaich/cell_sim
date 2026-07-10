@@ -11,6 +11,33 @@
 #include <memory>
 #include <string>
 #include <cctype>
+#include <chrono>
+#include <vector>
+#include <numeric>
+#include <iostream>
+#include <csignal>
+#include <cstdlib>
+
+namespace {
+    std::vector<double> frame_times;
+
+    void print_average_frame_time() {
+        if (frame_times.empty()) {
+            std::cout << "\nNo frames rendered yet.\n" << std::endl;
+            return;
+        }
+        double sum = std::accumulate(frame_times.begin(), frame_times.end(), 0.0);
+        double avg = sum / frame_times.size();
+        std::cout << "\n--- Rendering Statistics ---" << std::endl;
+        std::cout << "Total frames: " << frame_times.size() << std::endl;
+        std::cout << "Average frame time: " << (avg * 1000.0) << " ms" << std::endl;
+    }
+
+    void sigint_handler(int signal) {
+        print_average_frame_time();
+        std::exit(signal);
+    }
+}
 
 enum class CellColorMode {
     Age,
@@ -424,6 +451,7 @@ static float calculateBiomassSize(
 void visualize(
     Field& simulation_field,
     const std::string& colorMode) {
+    std::signal(SIGINT, sigint_handler);
 
     int width = simulation_field.get_width();
     int height = simulation_field.get_height();
@@ -497,6 +525,8 @@ void visualize(
             }
         }
 
+        auto start_time = std::chrono::high_resolution_clock::now();
+
         BeginDrawing();
 
         ClearBackground(RAYWHITE);
@@ -524,7 +554,12 @@ void visualize(
         );
 
         EndDrawing();
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> frame_duration = end_time - start_time;
+        frame_times.push_back(frame_duration.count());
     }
 
     CloseWindow();
+    print_average_frame_time();
 }

@@ -12,20 +12,19 @@ int main() {
     Field simulation_field(width, height);
     simulation_field.init_environment(simulation_config::field::initial_food);
 
-    const int y = height - simulation_config::colony::initial_cells_y_from_bottom;
-    const int end_x = std::min(
-        width,
-        simulation_config::colony::initial_cells_start_x +
-            simulation_config::colony::initial_cells_count
-    );
+    // ---- 40 КЛЕТОК В ЦЕНТРЕ НИЖНЕЙ СТРОКИ ----
+    const int y = height - 1;
+    const int cells_count = 40;
+    const int start_x = (width - cells_count) / 2;
 
-    for (int x = simulation_config::colony::initial_cells_start_x; x < end_x; ++x) {
-      simulation_field.place_cell(
-        x,
-        y,
-        std::make_shared<active_Biomass>()
-      );
+    for (int x = start_x; x < start_x + cells_count; ++x) {
+        simulation_field.place_cell(
+            x,
+            y,
+            std::make_shared<active_Biomass>()
+        );
     }
+    // -----------------------------------------
 
     visualize(simulation_field, simulation_config::visualization::default_color_mode);
 

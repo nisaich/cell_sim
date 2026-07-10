@@ -12,49 +12,23 @@
 #include <string>
 #include <cctype>
 
-// Кодировка состояния:
-// черный цвет - пустая 
-// зеленый цвет - активная
-// желтый цвет - неактивная
-// красный цвет - мертвая
-
-
-// ------------------------------------------------------------
-// Режим окрашивания поля
-// ------------------------------------------------------------
 enum class CellColorMode {
-    Age, // Возраст
-    Resistance, // Устойчивость к антибиотикам (резистентность)
-    Nutrition // Количество пищи
+    Age,
+    Resistance,
+    Nutrition,
+    Antibiotic   // новый режим
 };
 
-
-// ------------------------------------------------------------
-// Форма ячеек поля
-// ------------------------------------------------------------
 enum class CellShapeMode {
-    Square, // Квадрат
-    // Hexagon // Шестиугольник
+    Square,
 };
 
-class Biomass;
-
-// ----------------------------------------------------------------------------------------------------------
-// Визуализация ячейки в зависимости от её состояния, возраста, количества пищи и устойчивости к антибиотикам
-// ----------------------------------------------------------------------------------------------------------
 class VisualizationCell {
 protected:
-    // Клетка, которая лежит внутри Cell
     std::shared_ptr<abstract_Biomass> cell;
-
     float nutrition;
     float antibiotic;
     float resistance;
-
-    // 0 - пустая
-    // 1 - активная
-    // 2 - неактивная
-    // 3 - мертвая
     int state_nucleus;
     int age;
     int max_age;
@@ -67,12 +41,12 @@ public:
         float resistance
     )
         : cell(cell),
-          nutrition(nutrition),
-          antibiotic(antibiotic),
-          resistance(resistance),
-          state_nucleus(0),
-          age(0),
-          max_age(0)
+        nutrition(nutrition),
+        antibiotic(antibiotic),
+        resistance(resistance),
+        state_nucleus(0),
+        age(0),
+        max_age(0)
     {
         if (cell == nullptr) {
             state_nucleus = 0;
@@ -112,51 +86,50 @@ public:
 protected:
     Color getBaseColor() const {
         switch (state_nucleus) {
-            case 0:
-                return Color{
-                    simulation_config::visualization::empty_cell_r,
-                    simulation_config::visualization::empty_cell_g,
-                    simulation_config::visualization::empty_cell_b,
-                    255
-                };
+        case 0:
+            return Color{
+                simulation_config::visualization::empty_cell_r,
+                simulation_config::visualization::empty_cell_g,
+                simulation_config::visualization::empty_cell_b,
+                255
+            };
 
-            case 1:
-                return Color{
-                    simulation_config::visualization::active_cell_r,
-                    simulation_config::visualization::active_cell_g,
-                    simulation_config::visualization::active_cell_b,
-                    255
-                };
+        case 1:
+            return Color{
+                simulation_config::visualization::active_cell_r,
+                simulation_config::visualization::active_cell_g,
+                simulation_config::visualization::active_cell_b,
+                255
+            };
 
-            case 2:
-                return Color{
-                    simulation_config::visualization::nonactive_cell_r,
-                    simulation_config::visualization::nonactive_cell_g,
-                    simulation_config::visualization::nonactive_cell_b,
-                    255
-                };
+        case 2:
+            return Color{
+                simulation_config::visualization::nonactive_cell_r,
+                simulation_config::visualization::nonactive_cell_g,
+                simulation_config::visualization::nonactive_cell_b,
+                255
+            };
 
-            case 3:
-                return Color{
-                    simulation_config::visualization::dead_cell_r,
-                    simulation_config::visualization::dead_cell_g,
-                    simulation_config::visualization::dead_cell_b,
-                    255
-                };
+        case 3:
+            return Color{
+                simulation_config::visualization::dead_cell_r,
+                simulation_config::visualization::dead_cell_g,
+                simulation_config::visualization::dead_cell_b,
+                255
+            };
 
-            default:
-                return Color{
-                    simulation_config::visualization::empty_cell_r,
-                    simulation_config::visualization::empty_cell_g,
-                    simulation_config::visualization::empty_cell_b,
-                    255
-                };
+        default:
+            return Color{
+                simulation_config::visualization::empty_cell_r,
+                simulation_config::visualization::empty_cell_g,
+                simulation_config::visualization::empty_cell_b,
+                255
+            };
         }
     }
 
     Color applyBrightness(Color color, float brightness) const {
         brightness = std::clamp(brightness, 0.0f, 1.0f);
-
         return Color{
             static_cast<unsigned char>(color.r * brightness),
             static_cast<unsigned char>(color.g * brightness),
@@ -166,7 +139,6 @@ protected:
     }
 };
 
-// Окрашивание клетки в зависимости от возраста
 class AgeColorCell : public VisualizationCell {
 public:
     AgeColorCell(
@@ -175,43 +147,28 @@ public:
         float antibiotic,
         float resistance
     )
-        : VisualizationCell(cell, nutrition, antibiotic, resistance)
-    {
-    }
+        : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
     Color getColor() const override {
         Color baseColor = getBaseColor();
-
         if (cell == nullptr || !cell->is_alive()) {
             return baseColor;
         }
-
         float brightness = getBrightnessByAge();
-
         return applyBrightness(baseColor, brightness);
     }
 
 private:
     float getBrightnessByAge() const {
-        if (max_age == 0) {
-            return 1.0f;
-        }
-
-        float ageRatio =
-            static_cast<float>(age) /
-            static_cast<float>(max_age);
-
+        if (max_age == 0) return 1.0f;
+        float ageRatio = static_cast<float>(age) / static_cast<float>(max_age);
         ageRatio = std::clamp(ageRatio, 0.0f, 1.0f);
         ageRatio = std::sqrt(ageRatio);
-
-        float minBrightness = simulation_config::visualization::min_brightness;
-
-        return minBrightness + (1.0f - ageRatio) *
-            simulation_config::visualization::brightness_span;
+        return simulation_config::visualization::min_brightness +
+            (1.0f - ageRatio) * simulation_config::visualization::brightness_span;
     }
 };
 
-// Окрашивание клетки в зависимости от устойчивости к антибиотикам
 class ResistanceColorCell : public VisualizationCell {
 public:
     ResistanceColorCell(
@@ -220,25 +177,19 @@ public:
         float antibiotic,
         float resistance
     )
-        : VisualizationCell(cell, nutrition, antibiotic, resistance)
-    {
-    }
+        : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
     Color getColor() const override {
         Color baseColor = getBaseColor();
-
         if (cell == nullptr || !cell->is_alive()) {
             return baseColor;
         }
-
         float brightness = simulation_config::visualization::min_brightness +
             resistance * simulation_config::visualization::brightness_span;
-
         return applyBrightness(baseColor, brightness);
     }
 };
 
-// Окрашивание клетки в зависимости от количества пищи
 class NutritionColorCell : public VisualizationCell {
 public:
     NutritionColorCell(
@@ -247,53 +198,82 @@ public:
         float antibiotic,
         float resistance
     )
-        : VisualizationCell(cell, nutrition, antibiotic, resistance)
-    {
-    }
+        : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
     Color getColor() const override {
-      // Пустая клетка — показываем еду синим
-      if (cell == nullptr) {
-        return applyBrightness(
-            Color{
-                simulation_config::visualization::empty_cell_blue_r,
-                simulation_config::visualization::empty_cell_blue_g,
-                simulation_config::visualization::empty_cell_blue_b,
-                255
-            },
-            nutrition
+        if (cell == nullptr) {
+            return applyBrightness(
+                Color{
+                    simulation_config::visualization::empty_cell_blue_r,
+                    simulation_config::visualization::empty_cell_blue_g,
+                    simulation_config::visualization::empty_cell_blue_b,
+                    255
+                },
+                nutrition
+            );
+        }
+
+        if (!cell->is_alive()) {
+            return getBaseColor();
+        }
+
+        float biomass_ratio = std::clamp(
+            cell->get_biomass() / simulation_config::biomass::reproduction_min_biomass,
+            0.0f,
+            1.0f
         );
-      }
-
-      // Мёртвая клетка — красная, еду не показываем
-      if (!cell->is_alive()) {
-        return getBaseColor();
-      }
-
-      // Живая клетка — зелёная/жёлтая, яркость по биомассе
-      float biomass_ratio = std::clamp(
-          cell->get_biomass() / simulation_config::biomass::reproduction_min_biomass,
-          0.0f,
-          1.0f
-      );
-      float brightness = simulation_config::visualization::min_brightness +
-          biomass_ratio * simulation_config::visualization::brightness_span;
-      return applyBrightness(getBaseColor(), brightness);
+        float brightness = simulation_config::visualization::min_brightness +
+            biomass_ratio * simulation_config::visualization::brightness_span;
+        return applyBrightness(getBaseColor(), brightness);
     }
 };
 
+// ---------- НОВЫЙ КЛАСС ДЛЯ АНТИБИОТИКА ----------
+class AntibioticColorCell : public VisualizationCell {
+public:
+    AntibioticColorCell(
+        const std::shared_ptr<abstract_Biomass>& cell,
+        float nutrition,
+        float antibiotic,
+        float resistance
+    )
+        : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
-// ------------------------------------------------------------------------
-// Визуализация ячейки в зависимости от её формы
-// ------------------------------------------------------------------------
+    Color getColor() const override {
+        // Если клетка живая или мёртвая, показываем её цвет, но с наложением яркости от антибиотика
+        if (cell != nullptr) {
+            Color base = getBaseColor();
+            // Яркость зависит от концентрации антибиотика (нормируем)
+            float conc = std::clamp(
+                antibiotic / simulation_config::antibiotic::visualization_normalizer,
+                0.0f,
+                1.0f
+            );
+            // Для живых клеток делаем цвет тусклее при высоком антибиотике (стресс)
+            float brightness = 1.0f - conc * 0.7f;  // от 1.0 до 0.3
+            brightness = std::clamp(brightness, 0.3f, 1.0f);
+            return applyBrightness(base, brightness);
+        }
+        else {
+            // Пустая клетка – показываем концентрацию антибиотика в синих тонах
+            float conc = std::clamp(
+                antibiotic / simulation_config::antibiotic::visualization_normalizer,
+                0.0f,
+                1.0f
+            );
+            // От чёрного (0) до ярко-синего (1)
+            unsigned char intensity = static_cast<unsigned char>(conc * 255);
+            return Color{ 0, 0, intensity, 255 };
+        }
+    }
+};
+// --------------------------------------------------
 
 class VisualizationBiomass {
 private:
     std::string shape;
-
     float sizeX;
     float sizeY;
-
     CellColorMode colorMode;
 
 public:
@@ -304,11 +284,9 @@ public:
         CellColorMode colorMode
     )
         : shape(shape),
-          sizeX(sizeX),
-          sizeY(sizeY),
-          colorMode(colorMode)
-    {
-    }
+        sizeX(sizeX),
+        sizeY(sizeY),
+        colorMode(colorMode) {}
 
     void draw(
         int width,
@@ -338,12 +316,7 @@ public:
 protected:
     void drawSquare(float x, float y, Color color) const {
         DrawRectangleRec(
-            Rectangle{
-                x,
-                y,
-                sizeX,
-                sizeY
-            },
+            Rectangle{ x, y, sizeX, sizeY },
             color
         );
     }
@@ -361,60 +334,40 @@ protected:
             0.0f,
             1.0f
         );
-        float antibiotic = std::clamp(antibioticInEnvironment, 0.0f, 1.0f);
+        float antibiotic = std::clamp(
+            antibioticInEnvironment,
+            0.0f,
+            simulation_config::antibiotic::visualization_normalizer
+        );
 
         float resistance = 0.0f;
-
         if (cell != nullptr) {
             resistance = cell->get_level_of_resistance();
         }
 
         switch (colorMode) {
-            case CellColorMode::Age: {
-                AgeColorCell visual(
-                    cell,
-                    nutrition,
-                    antibiotic,
-                    resistance
-                );
-
-                return visual.getColor();
-            }
-
-            case CellColorMode::Resistance: {
-                ResistanceColorCell visual(
-                    cell,
-                    nutrition,
-                    antibiotic,
-                    resistance
-                );
-
-                return visual.getColor();
-            }
-
-            case CellColorMode::Nutrition: {
-                NutritionColorCell visual(
-                    cell,
-                    nutrition,
-                    antibiotic,
-                    resistance
-                );
-
-                return visual.getColor();
-            }
-
-            default:
-                return BLACK;
+        case CellColorMode::Age: {
+            AgeColorCell visual(cell, nutrition, antibiotic, resistance);
+            return visual.getColor();
+        }
+        case CellColorMode::Resistance: {
+            ResistanceColorCell visual(cell, nutrition, antibiotic, resistance);
+            return visual.getColor();
+        }
+        case CellColorMode::Nutrition: {
+            NutritionColorCell visual(cell, nutrition, antibiotic, resistance);
+            return visual.getColor();
+        }
+        case CellColorMode::Antibiotic: {
+            AntibioticColorCell visual(cell, nutrition, antibiotic, resistance);
+            return visual.getColor();
+        }
+        default:
+            return BLACK;
         }
     }
 };
 
-
-// ------------
-// Визуализация
-// ------------
-
-// Определяем по какому состаянию будет окрашеваться ячейка
 static CellColorMode getColorModeFromText(const std::string& colorMode) {
     if (colorMode == "age") {
         return CellColorMode::Age;
@@ -425,11 +378,36 @@ static CellColorMode getColorModeFromText(const std::string& colorMode) {
     else if (colorMode == "nutrition") {
         return CellColorMode::Nutrition;
     }
-
+    else if (colorMode == "antibiotic") {
+        return CellColorMode::Antibiotic;
+    }
     return CellColorMode::Age;
 }
 
-// Вычисляем размер ячейки в пикселях 
+static void drawAntibioticLegend(int x, int y) {
+    const int barWidth = simulation_config::visualization::legend_width;
+    const int barHeight = simulation_config::visualization::legend_height;
+    const int fontSize = simulation_config::visualization::legend_font_size;
+
+    // Полупрозрачная подложка, чтобы легенда читалась над полем любого цвета
+    DrawRectangle(x - 6, y - 6, barWidth + 90, barHeight + 20, Color{ 255, 255, 255, 180 });
+
+    // Градиент "чёрный (0) -> синий (max)", как у пустых клеток в этом режиме
+    for (int i = 0; i < barHeight; ++i) {
+        float t = 1.0f - static_cast<float>(i) / static_cast<float>(barHeight - 1);
+        unsigned char intensity = static_cast<unsigned char>(t * 255);
+        DrawRectangle(x, y + i, barWidth, 1, Color{ 0, 0, intensity, 255 });
+    }
+    DrawRectangleLines(x, y, barWidth, barHeight, GRAY);
+
+    DrawText(
+        TextFormat("%.0f", simulation_config::antibiotic::visualization_normalizer),
+        x + barWidth + 6, y - 2, fontSize, DARKGRAY
+    );
+    DrawText("0", x + barWidth + 6, y + barHeight - fontSize + 2, fontSize, DARKGRAY);
+    DrawText("Antibiotic", x, y + barHeight + 4, fontSize, DARKGRAY);
+}
+
 static float calculateBiomassSize(
     int width,
     int height,
@@ -438,10 +416,8 @@ static float calculateBiomassSize(
 ) {
     float cellSizeByWidth =
         static_cast<float>(availableWidth) / static_cast<float>(width);
-
     float cellSizeByHeight =
         static_cast<float>(screenHeight) / static_cast<float>(height);
-
     return std::min(cellSizeByWidth, cellSizeByHeight);
 }
 
@@ -452,7 +428,6 @@ void visualize(
     int width = simulation_field.get_width();
     int height = simulation_field.get_height();
 
-    // Инициализируем стандартное окно, чтобы Raylib подтянул данные монитора
     InitWindow(
         simulation_config::visualization::initial_window_width,
         simulation_config::visualization::initial_window_height,
@@ -462,15 +437,12 @@ void visualize(
     int monitor = GetCurrentMonitor();
     const int graphPanelWidth = simulation_config::visualization::graph_panel_width;
     const int contentGap = simulation_config::visualization::modified_content_gap;
-    
-    // Берем размеры монитора, но оставляем небольшой запас (например, 100 пикселей), 
-    // чтобы окно не перекрывалось панелью задач ОС
+
     int maxScreenWidth = GetMonitorWidth(monitor) -
         simulation_config::visualization::modified_window_screen_margin;
     int maxScreenHeight = GetMonitorHeight(monitor) -
         simulation_config::visualization::modified_window_screen_margin;
 
-    // Вычисляем размер ячейки исходя из доступного места на экране
     float cellSize = calculateBiomassSize(
         width,
         height,
@@ -478,25 +450,17 @@ void visualize(
         maxScreenHeight
     );
 
-    // Вычисляем точный размер окна в пикселях (размер поля * размер одной ячейки)
     int windowWidth = static_cast<int>(width * cellSize) + graphPanelWidth + contentGap;
     int windowHeight = static_cast<int>(height * cellSize);
 
-    // Подгоняем окно под точный размер поля
     SetWindowSize(windowWidth, windowHeight);
 
-    // Ставим окно ровно по центру твоего монитора
     int windowPosX = (GetMonitorWidth(monitor) - windowWidth) / 2;
     int windowPosY = (GetMonitorHeight(monitor) - windowHeight) / 2;
     SetWindowPosition(windowPosX, windowPosY);
 
-    // Полный экран нам больше не нужен, убираем эту строку:
-    // ToggleFullscreen(); 
-
     SetTargetFPS(simulation_config::visualization::target_fps);
 
-    // Так как окно теперь идеально совпадает с размером поля, 
-    // отрисовывать начинаем прямо с левого верхнего угла
     float startX = 0.0f;
     float startY = 0.0f;
 
@@ -518,8 +482,6 @@ void visualize(
     }
     statsHistory.record(simulation_field, tick);
 
-    // Если симуляция тормозит, можешь вернуть сюда цикл for на несколько шагов, 
-    // как мы обсуждали ранее
     while (!WindowShouldClose()) {
         if (simulation_field.has_living_cells()) {
             simulation_field.make_one_step(tick);
@@ -542,6 +504,14 @@ void visualize(
             startX,
             startY
         );
+
+        if (mode == CellColorMode::Antibiotic) {
+            drawAntibioticLegend(
+                simulation_config::visualization::legend_x,
+                simulation_config::visualization::legend_y
+            );
+        }
+
         statsHistory.draw(
             static_cast<int>(width * cellSize + contentGap),
             0,

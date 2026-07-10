@@ -7,6 +7,10 @@ float Antibiotic::get_concentration() const {
     return concentration;
 }
 
+void Antibiotic::set_concentration(float value) {
+    concentration = (value >= 0.0f) ? value : 0.0f;
+}
+
 void Antibiotic::add(float value) {
     if (value > 0.0f) {
         concentration += value;

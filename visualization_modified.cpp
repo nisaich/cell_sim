@@ -520,15 +520,15 @@ void visualize(
                 tick_times.push_back(tick_duration.count());
 
                 ++tick;
-
-                if (statsRecorder.is_open()) {
-                    statsRecorder.record(simulation_field, tick);
-                }
-                statsHistory.record(simulation_field, tick);
             } else {
                 break;
             }
         }
+
+        if (statsRecorder.is_open()) {
+            statsRecorder.record(simulation_field, tick);
+        }
+        statsHistory.record(simulation_field, tick);
 
         BeginDrawing();
 

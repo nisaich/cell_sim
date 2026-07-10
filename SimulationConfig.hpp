@@ -6,8 +6,8 @@ namespace simulation_config {
         // 1 ячейка = 1 мкм. 1000x1000 ячеек = 1 мм x 1 мм.
         // Это физически достоверно для Pseudomonas aeruginosa (размер клетки ~1-2 мкм)
         // и обеспечивает идеальную производительность в 60 FPS на C++.
-        inline constexpr int width = 1000;
-        inline constexpr int height = 1000;
+        inline constexpr int width = 100;
+        inline constexpr int height = 100;
 
         // Начальная концентрация глюкозы в среде.
         // Для активного роста в закрытой колбе/чашке Петри используем 3.0 г/л = 3 000 000 мкг/л.
@@ -86,7 +86,7 @@ namespace simulation_config {
         inline constexpr int screen_width = 1000;
         inline constexpr int screen_height = 1000;
         inline constexpr int target_fps = 0;
-        inline constexpr int steps_per_frame = 1;              // Количество шагов симуляции за один кадр отрисовки
+        inline constexpr int steps_per_frame = 500;              // Количество шагов симуляции за один кадр отрисовки
 
         inline constexpr int graph_panel_width = 400;
         inline constexpr int modified_content_gap = 20;

@@ -19,22 +19,22 @@
 #include <cstdlib>
 
 namespace {
-    std::vector<double> frame_times;
+    std::vector<double> tick_times;
 
-    void print_average_frame_time() {
-        if (frame_times.empty()) {
-            std::cout << "\nNo frames rendered yet.\n" << std::endl;
+    void print_average_tick_time() {
+        if (tick_times.empty()) {
+            std::cout << "\nNo simulation ticks calculated yet.\n" << std::endl;
             return;
         }
-        double sum = std::accumulate(frame_times.begin(), frame_times.end(), 0.0);
-        double avg = sum / frame_times.size();
-        std::cout << "\n--- Rendering Statistics ---" << std::endl;
-        std::cout << "Total frames: " << frame_times.size() << std::endl;
-        std::cout << "Average frame time: " << (avg * 1000.0) << " ms" << std::endl;
+        double sum = std::accumulate(tick_times.begin(), tick_times.end(), 0.0);
+        double avg = sum / tick_times.size();
+        std::cout << "\n--- Simulation Performance Statistics ---" << std::endl;
+        std::cout << "Total ticks: " << tick_times.size() << std::endl;
+        std::cout << "Average time per tick: " << (avg * 1000.0) << " ms" << std::endl;
     }
 
     void sigint_handler(int signal) {
-        print_average_frame_time();
+        print_average_tick_time();
         std::exit(signal);
     }
 }
@@ -513,7 +513,12 @@ void visualize(
     while (!WindowShouldClose()) {
         for (int i = 0; i < simulation_config::visualization::steps_per_frame; ++i) {
             if (simulation_field.has_living_cells()) {
+                auto start_time = std::chrono::high_resolution_clock::now();
                 simulation_field.make_one_step(tick);
+                auto end_time = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> tick_duration = end_time - start_time;
+                tick_times.push_back(tick_duration.count());
+
                 ++tick;
 
                 if (statsRecorder.is_open()) {
@@ -524,8 +529,6 @@ void visualize(
                 break;
             }
         }
-
-        auto start_time = std::chrono::high_resolution_clock::now();
 
         BeginDrawing();
 
@@ -554,12 +557,8 @@ void visualize(
         );
 
         EndDrawing();
-
-        auto end_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> frame_duration = end_time - start_time;
-        frame_times.push_back(frame_duration.count());
     }
 
     CloseWindow();
-    print_average_frame_time();
+    print_average_tick_time();
 }

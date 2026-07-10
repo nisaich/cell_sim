@@ -5,11 +5,11 @@ namespace simulation_config {
     namespace field {
         inline constexpr int width = 200;
         inline constexpr int height = 200;
-        inline constexpr float initial_food = 3.0f;
+        inline constexpr float initial_food = 5.0f;              // умеренный старт
         inline constexpr float default_initial_food = 0.0f;
-        inline constexpr float food_diffusion_coeff = 0.02f;   // медленная диффузия
-        inline constexpr int steps_for_adding_food = 50;
-        inline constexpr int count_of_adding_food = 50;        // меньше пищи
+        inline constexpr float food_diffusion_coeff = 0.04f;     // умеренная диффузия
+        inline constexpr int steps_for_adding_food = 30;         // каждые 30 шагов
+        inline constexpr int count_of_adding_food = 120;         // достаточно для роста
     }
 
     namespace colony {
@@ -33,7 +33,9 @@ namespace simulation_config {
         inline constexpr float nonactive_max_life_multiplier = 100.0f;
         inline constexpr int dead_steps_to_disappearance = 10000;
 
-        inline constexpr float lateral_growth_tolerance = 0.7f;
+        // Ключевые параметры для ветвления
+        inline constexpr float lateral_growth_tolerance = 0.5f;   // строгий отбор
+        inline constexpr float starvation_biomass_threshold = 0.15f;
     }
 
     namespace antibiotic {
@@ -49,15 +51,15 @@ namespace simulation_config {
     }
 
     namespace monod {
-        inline constexpr float U_max = 0.002f;
+        inline constexpr float U_max = 0.003f;                 // быстрее потребление
         inline constexpr float K_F = 2.0f;
         inline constexpr float delta_t = 5.0f;
         inline constexpr float Y_B_F = 0.5f;
-        inline constexpr float m_act = 0.0002f;
+        inline constexpr float m_act = 0.0005f;
         inline constexpr float m_inactiv = 0.00002f;
-        inline constexpr float starvation_biomass_threshold = 0.2f;
+        inline constexpr float starvation_biomass_threshold = 0.15f;
         inline constexpr float greed_coefficient = 1.5f;
-        inline constexpr int steps_for_waking_up = 50;
+        inline constexpr int steps_for_waking_up = 10;
     }
 
     namespace graphs {

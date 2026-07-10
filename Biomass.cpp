@@ -226,6 +226,7 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     place_for_child->set_cell(child);
     return true;
 }
+
 // ---------- nonactive_Biomass ----------
 nonactive_Biomass::nonactive_Biomass(float resistance, int max_age) {
     level_of_resistance = resistance * resistance_multiplier;
@@ -262,11 +263,8 @@ bool nonactive_Biomass::reproduction(Field& current_field, int x, int y) {
     }
     else {
         float F = nucleus.get_food().get_amount();
-        float potential_income = simulation_config::monod::Y_B_F *
-            (simulation_config::monod::U_max * F / (simulation_config::monod::K_F + F) * simulation_config::monod::delta_t);
-        float threshold = simulation_config::monod::m_act * simulation_config::monod::delta_t * biomass * simulation_config::monod::greed_coefficient;
-
-        if (potential_income > threshold) {
+        float maintenance_need = simulation_config::monod::m_act * simulation_config::monod::delta_t * biomass;
+        if (F > maintenance_need * 1.2f) {
             steps_until_wakeup = simulation_config::monod::steps_for_waking_up;
         }
     }

@@ -36,7 +36,7 @@ namespace simulation_config {
         inline constexpr double default_initial_food = 0.0;
         inline constexpr double D = 1.0 / 600.0; //используется в food_diffusion_coeff
         inline constexpr double food_diffusion_coeff = 0.20;//field::D * monod::delta_t;   // Быстрая диффузия для адекватного перераспределения
-        inline constexpr int steps_for_adding_food = 1000;
+        inline constexpr int steps_for_adding_food = 10000;
         inline constexpr double count_of_adding_food = 100.0;
     }
 

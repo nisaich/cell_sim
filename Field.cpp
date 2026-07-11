@@ -358,12 +358,6 @@ void Field::make_one_step(int number_of_step) {
     if (number_of_step % simulation_config::visualization::number_of_step_to_diffuse == 0) {
         diffuse_food();
         diffuse_antibiotic();
-    }
-
-    // Добавление пищи (точечное)
-    if (number_of_step % simulation_config::field::steps_for_adding_food == 0) {
-        add_some_food(simulation_config::field::count_of_adding_food);
-    }
 
     // Добавление антибиотика
     double sum_antibiotic = 0.0;
@@ -379,6 +373,13 @@ void Field::make_one_step(int number_of_step) {
         add_antibiotic(concentration);
         concentration += concetration_for_next_step;    
         middle_value_of_antibiotic += concetration_for_next_step;
+      }
+
+    }
+
+    // Добавление пищи (точечное)
+    if (number_of_step % simulation_config::field::steps_for_adding_food == 0) {
+        add_some_food(simulation_config::field::count_of_adding_food);
     }
 
     std::vector<std::pair<int, int>> cells_for_this_step;

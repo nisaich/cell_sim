@@ -8,7 +8,7 @@ Cell::Cell(
     int x,
     int y,
     double start_food,
-    float start_antibiotic
+    double start_antibiotic
 )
     : cell_coordinates{ x, y },
     food(start_food),
@@ -30,7 +30,7 @@ void Cell::remove_cell() {
     cell = nullptr;
 }
 
-std::pair<double, float> Cell::situation_in_the_environment() const {
+std::pair<double, double> Cell::situation_in_the_environment() const {
     return {
         food.get_amount(),
         antibiotic.get_concentration()
@@ -70,7 +70,7 @@ Field::Field(int width, int height)
     }
 }
 
-void Field::init_environment(float initial_food) {
+void Field::init_environment(double initial_food) {
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             get_nucleus(x, y).get_food().set_amount(initial_food);
@@ -84,7 +84,7 @@ void Field::add_some_food(int count_of_adding_food) {
     get_nucleus(center, 0).get_food().add(count_of_adding_food);
 }
 
-void Field::add_antibiotic(float concentration) {
+void Field::add_antibiotic(double concentration) {
   for (int x = 0; x < width; x++){  //добавляем только по самой верхней строчке, так и должно быть
     get_nucleus(x, 0).get_antibiotic().add(concentration);
   }
@@ -236,7 +236,7 @@ void Field::diffuse_antibiotic() {
 #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            get_nucleus(x, y).get_antibiotic().set_concentration(static_cast<float>(grid[y][x]));
+            get_nucleus(x, y).get_antibiotic().set_concentration(grid[y][x]);
         }
     }
 }

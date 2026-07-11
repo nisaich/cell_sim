@@ -20,7 +20,7 @@ void abstract_Biomass::copy_common_state_to(abstract_Biomass& other) const {
     other.nucleus = nucleus;
 }
 
-float abstract_Biomass::get_level_of_resistance() const {
+double abstract_Biomass::get_level_of_resistance() const {
     return level_of_resistance;
 }
 
@@ -39,9 +39,9 @@ bool abstract_Biomass::must_he_die(Field& current_field, int x, int y) const {
     }
 
     // Смерть от антибиотика
-    float conc = nucleus_ref.get_antibiotic().get_concentration();
-    float excess = conc - level_of_resistance;
-    if (excess > 0.0f) {
+    double conc = nucleus_ref.get_antibiotic().get_concentration();
+    double excess = conc - level_of_resistance;
+    if (excess > 0.0) {
         if (excess > simulation_config::antibiotic::death_threshold) {
             nucleus_ref.get_antibiotic().set_concentration(excess);
             return true;
@@ -98,7 +98,7 @@ bool abstract_Biomass::reproduction(Field& /*current_field*/, int /*x*/, int /*y
 }
 
 // ---------- active_Biomass ----------
-active_Biomass::active_Biomass(float resistance, int max_age) {
+active_Biomass::active_Biomass(double resistance, int max_age) {
     level_of_resistance = resistance;
     max_age_of_cell = max_age;
 }
@@ -129,33 +129,33 @@ void active_Biomass::consume_and_decay(Food& food) {
     // Физиологическая адаптация резистентности (без деления, без случайности)
     // Индукция (по закону Моно): есть антибиотик → поднимаем щиты
     // Релаксация: нет антибиотика → возвращаемся к "дикому" уровню
-    float conc = nucleus->get_antibiotic().get_concentration();
-    float dt = static_cast<float>(simulation_config::monod::delta_t);
-    float r_default = simulation_config::biomass::default_resistance;
+    double conc = nucleus->get_antibiotic().get_concentration();
+    double dt = simulation_config::monod::delta_t;
+    double r_default = simulation_config::biomass::default_resistance;
 
-    if (conc > 0.0f) {
+    if (conc > 0.0) {
         // Режим индукции: насосы включаются пропорционально концентрации (закон Моно)
-        float delta_r = simulation_config::antibiotic::k_ind
+        double delta_r = simulation_config::antibiotic::k_ind
                         * (conc / (simulation_config::antibiotic::K_ind + conc))
-                        * (1.0f - level_of_resistance)
+                        * (1.0 - level_of_resistance)
                         * dt;
-        level_of_resistance = std::min(1.0f, level_of_resistance + delta_r);
+        level_of_resistance = std::min(1.0, level_of_resistance + delta_r);
     } else {
         // Режим релаксации: насосы отключаются, клетка возвращается к базовому состоянию
-        float delta_r = simulation_config::antibiotic::k_rec
+        double delta_r = simulation_config::antibiotic::k_rec
                         * (level_of_resistance - r_default)
                         * dt;
         level_of_resistance = std::max(r_default, level_of_resistance - delta_r);
     }
 
     // Переход в спящее состояние из-за стресса от антибиотика
-    float excess = conc - level_of_resistance;
-    if (excess > 0.0f) {
+    double excess = conc - level_of_resistance;
+    if (excess > 0.0) {
         static std::mt19937 gen(std::random_device{}());
-        std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-        float base_chance = std::min(excess * 0.01f, static_cast<float>(simulation_config::antibiotic::stress_transition_chance));
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+        double base_chance = std::min(excess * 0.01, static_cast<double>(simulation_config::antibiotic::stress_transition_chance));
         // Адаптация вероятности к размеру шага dt
-        float adjusted_chance = 1.0f - std::pow(1.0f - base_chance, dt);
+        double adjusted_chance = 1.0 - std::pow(1.0 - base_chance, dt);
         if (dist(gen) < adjusted_chance) {
             auto nonactive = std::make_shared<nonactive_Biomass>();
             copy_common_state_to(*nonactive);
@@ -174,18 +174,18 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
 
     static std::mt19937 generator(std::random_device{}());
 
-    float current_chance = 1.0f;
+    double current_chance = 1.0;
     if (nucleus != nullptr) {
-        float conc = nucleus->get_antibiotic().get_concentration();
-        float excess = conc - level_of_resistance;
-        if (excess > 0.0f) {
-            float penalty = std::min(excess * 0.1f, static_cast<float>(simulation_config::antibiotic::reproduction_penalty));
-            current_chance *= (1.0f - penalty);
+        double conc = nucleus->get_antibiotic().get_concentration();
+        double excess = conc - level_of_resistance;
+        if (excess > 0.0) {
+            double penalty = std::min(excess * 0.1, static_cast<double>(simulation_config::antibiotic::reproduction_penalty));
+            current_chance *= (1.0 - penalty);
         }
     }
 
-    if (current_chance < 1.0f) {
-        std::uniform_real_distribution<float> chance_distribution(0.00f, 1.00f);
+    if (current_chance < 1.0) {
+        std::uniform_real_distribution<double> chance_distribution(0.0, 1.0);
         if (chance_distribution(generator) > current_chance) return false;
     }
 
@@ -193,14 +193,14 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     std::uniform_int_distribution<std::size_t> distribution(0, free_neighbours.size() - 1);
     Cell* place_for_child = free_neighbours[distribution(generator)];
 
-    float child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
+    double child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
     biomass = biomass - child_biomass;
 
     auto child = std::make_shared<active_Biomass>(level_of_resistance, max_age_of_cell);
     child->biomass = child_biomass;
 
     // ---- ЛОГИКА ПРЫЖКА (DISPERSION) ----
-    std::uniform_real_distribution<float> dispersion_dist(0.0f, 1.0f);
+    std::uniform_real_distribution<double> dispersion_dist(0.0, 1.0);
     if (dispersion_dist(generator) < simulation_config::biomass::dispersion_chance) {
         int R = simulation_config::biomass::dispersion_radius;
         std::vector<Cell*> potential_targets;
@@ -241,7 +241,7 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
 }
 
 // ---------- nonactive_Biomass ----------
-nonactive_Biomass::nonactive_Biomass(float resistance, int max_age) {
+nonactive_Biomass::nonactive_Biomass(double resistance, int max_age) {
     level_of_resistance = resistance * resistance_multiplier;
     max_age_of_cell = static_cast<int>(max_age * max_life_multiplier);
 }
@@ -251,8 +251,8 @@ void nonactive_Biomass::apply_dormancy_effects() {
     max_age_of_cell = static_cast<int>(max_age_of_cell * max_life_multiplier);
 }
 
-float nonactive_Biomass::baseline_resistance() const {
-    if (resistance_multiplier <= 0.0f) return level_of_resistance;
+double nonactive_Biomass::baseline_resistance() const {
+    if (resistance_multiplier <= 0.0) return level_of_resistance;
     return level_of_resistance / resistance_multiplier;
 }
 

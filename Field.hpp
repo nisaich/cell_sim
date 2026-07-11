@@ -24,7 +24,7 @@ public:
         int x,
         int y,
         double start_food = 0.0,
-        float start_antibiotic = 0.0f
+        double start_antibiotic = 0.0
     );
 
     bool is_this_nucleus_free() const;
@@ -33,7 +33,7 @@ public:
     std::shared_ptr<abstract_Biomass> get_cell() const;
     void remove_cell();
 
-    std::pair<double, float> situation_in_the_environment() const;
+    std::pair<double, double> situation_in_the_environment() const;
     std::array<int, 2> coordinates() const;
 
     Food& get_food();
@@ -51,9 +51,9 @@ private:
 
     void process_dead_cells_disappearance();
 
-    float concetration_for_next_step = simulation_config::antibiotic::concetration_for_next_step;
-    float concentration = 0;  //начальная концентрация:0, потом добавляем ещё
-    float middle_value_of_antibiotic = simulation_config::antibiotic::middle_value_of_antibiotic;  //посмотрите в файле конфига
+    double concetration_for_next_step = simulation_config::antibiotic::concetration_for_next_step;
+    double concentration = 0.0;  //начальная концентрация:0, потом добавляем ещё
+    double middle_value_of_antibiotic = simulation_config::antibiotic::middle_value_of_antibiotic;  //посмотрите в файле конфига
 public:
     Field(int width, int height);
 
@@ -67,13 +67,13 @@ public:
     void diffuse_antibiotic();   // новый метод
 
     void init_environment(
-        float initial_food = simulation_config::field::default_initial_food
+        double initial_food = simulation_config::field::default_initial_food
     );
     void add_some_food(
         int count_of_adding_food = simulation_config::field::count_of_adding_food
     );
     void add_antibiotic(          // новый метод
-        float concentration
+        double concentration
     );
 
     const std::vector<std::vector<Cell>>& get_field() const;

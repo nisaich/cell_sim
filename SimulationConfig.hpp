@@ -52,7 +52,7 @@ namespace simulation_config {
         inline constexpr double child_biomass_ratio = 0.5;     // Деление строго пополам
         inline constexpr double reproduction_min_biomass = 0.7; // Минимальная биомасса для деления
         inline constexpr int default_max_age = 1000000;
-        inline constexpr double default_resistance = 0.0;
+        inline constexpr double default_resistance = 0.000015;
 
         // Параметры спящего состояния (дормантность)
         inline constexpr double nonactive_resistance_multiplier = 2.0; // Спящие клетки устойчивее
@@ -71,16 +71,16 @@ namespace simulation_config {
         inline constexpr double decay_rate = 0.001;             // Деградация антибиотика за шаг
 
         // Добавление антибиотика
-        inline constexpr float concetration_for_next_step = 0.00003;  //сколько мы добавим на следующем ходу
-        inline constexpr double visualization_normalizer = 1.0; // Нормировка для отображения концентрации
-        inline constexpr float middle_value_of_antibiotic = 0.00003;  //среднее значение антибиотика после которого произойдёт добавление нового антибиотика
+        inline constexpr double concetration_for_next_step = 0.00003;  //сколько мы добавим на следующем ходу
+        inline constexpr double visualization_normalizer =  0.00003; // Нормировка для отображения концентрации
+        inline constexpr double middle_value_of_antibiotic = 0.00003;  //среднее значение антибиотика после которого произойдёт добавление нового антибиотика
 
         // Параметры физиологической (адаптивной) резистентности
         // (механизмы эффлюксных насосов MexAB-OprM и регуляции поринов OprD у Pseudomonas)
-        inline constexpr float k_ind = 0.005f;         // Макс. скорость индукции (полная адаптация ~3-5 мин стресса)
-        inline constexpr float K_ind = 0.5f;           // Константа индукции: концентрация A, при которой запускается 50% мощности
-        inline constexpr float k_rec = 0.001f;         // Скорость релаксации (откат в 5x медленнее подъёма)
-        inline constexpr float fitness_cost_coef = 0.35f; // Штраф за активные насосы: при r=1 клетка ест на 35% медленнее
+        inline constexpr double k_ind = 0.005;         // Макс. скорость индукции (полная адаптация ~3-5 мин стресса)
+        inline constexpr double K_ind = 0.5;           // Константа индукции: концентрация A, при которой запускается 50% мощности
+        inline constexpr double k_rec = 0.001;         // Скорость релаксации (откат в 5x медленнее подъёма)
+        inline constexpr double fitness_cost_coef = 0.35; // Штраф за активные насосы: при r=1 клетка ест на 35% медленнее
     }
 
     namespace visualization {
@@ -130,12 +130,12 @@ namespace simulation_config {
     }
 
     namespace graphs {
-        inline constexpr float chart_roundness = 0.05f;
+        inline constexpr double chart_roundness = 0.05;
         inline constexpr int chart_round_segments = 4;
-        inline constexpr float chart_outline_thickness = 1.0f;
-        inline constexpr float chart_line_thickness = 1.5f;
-        inline constexpr float chart_span_epsilon = 1e-6f;
-        inline constexpr float chart_min_span = 1.0f;
+        inline constexpr double chart_outline_thickness = 1.0;
+        inline constexpr double chart_line_thickness = 1.5;
+        inline constexpr double chart_span_epsilon = 1e-6;
+        inline constexpr double chart_min_span = 1.0;
         inline constexpr int text_font_size = 12;
         inline constexpr int title_font_size = 14;
 

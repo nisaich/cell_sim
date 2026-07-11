@@ -60,9 +60,9 @@ enum class CellShapeMode {
 class VisualizationCell {
 protected:
     std::shared_ptr<abstract_Biomass> cell;
-    float nutrition;
-    float antibiotic;
-    float resistance;
+    double nutrition;
+    double antibiotic;
+    double resistance;
     int state_nucleus;
     int age;
     int max_age;
@@ -70,9 +70,9 @@ protected:
 public:
     VisualizationCell(
         const std::shared_ptr<abstract_Biomass>& cell,
-        float nutrition,
-        float antibiotic,
-        float resistance
+        double nutrition,
+        double antibiotic,
+        double resistance
     )
         : cell(cell),
         nutrition(nutrition),
@@ -105,15 +105,15 @@ public:
 
     virtual Color getColor() const = 0;
 
-    float getNutrition() const {
+    double getNutrition() const {
         return nutrition;
     }
 
-    float getAntibiotic() const {
+    double getAntibiotic() const {
         return antibiotic;
     }
 
-    float getResistance() const {
+    double getResistance() const {
         return resistance;
     }
 
@@ -162,8 +162,8 @@ protected:
         }
     }
 
-    Color applyBrightness(Color color, float brightness) const {
-        brightness = std::clamp(brightness, 0.0f, 1.0f);
+    Color applyBrightness(Color color, double brightness) const {
+        brightness = std::clamp(brightness, 0.0, 1.0);
         return Color{
             static_cast<unsigned char>(color.r * brightness),
             static_cast<unsigned char>(color.g * brightness),
@@ -177,9 +177,9 @@ class AgeColorCell : public VisualizationCell {
 public:
     AgeColorCell(
         const std::shared_ptr<abstract_Biomass>& cell,
-        float nutrition,
-        float antibiotic,
-        float resistance
+        double nutrition,
+        double antibiotic,
+        double resistance
     )
         : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
@@ -188,18 +188,18 @@ public:
         if (cell == nullptr || !cell->is_alive()) {
             return baseColor;
         }
-        float brightness = getBrightnessByAge();
+        double brightness = getBrightnessByAge();
         return applyBrightness(baseColor, brightness);
     }
 
 private:
-    float getBrightnessByAge() const {
-        if (max_age == 0) return 1.0f;
-        float ageRatio = static_cast<float>(age) / static_cast<float>(max_age);
-        ageRatio = std::clamp(ageRatio, 0.0f, 1.0f);
+    double getBrightnessByAge() const {
+        if (max_age == 0) return 1.0;
+        double ageRatio = static_cast<double>(age) / static_cast<double>(max_age);
+        ageRatio = std::clamp(ageRatio, 0.0, 1.0);
         ageRatio = std::sqrt(ageRatio);
         return simulation_config::visualization::min_brightness +
-            (1.0f - ageRatio) * simulation_config::visualization::brightness_span;
+            (1.0 - ageRatio) * simulation_config::visualization::brightness_span;
     }
 };
 
@@ -207,9 +207,9 @@ class ResistanceColorCell : public VisualizationCell {
 public:
     ResistanceColorCell(
         const std::shared_ptr<abstract_Biomass>& cell,
-        float nutrition,
-        float antibiotic,
-        float resistance
+        double nutrition,
+        double antibiotic,
+        double resistance
     )
         : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
@@ -218,7 +218,7 @@ public:
         if (cell == nullptr || !cell->is_alive()) {
             return baseColor;
         }
-        float brightness = simulation_config::visualization::min_brightness +
+        double brightness = simulation_config::visualization::min_brightness +
             resistance * simulation_config::visualization::brightness_span;
         return applyBrightness(baseColor, brightness);
     }
@@ -228,9 +228,9 @@ class NutritionColorCell : public VisualizationCell {
 public:
     NutritionColorCell(
         const std::shared_ptr<abstract_Biomass>& cell,
-        float nutrition,
-        float antibiotic,
-        float resistance
+        double nutrition,
+        double antibiotic,
+        double resistance
     )
         : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
@@ -251,12 +251,12 @@ public:
             return getBaseColor();
         }
 
-        float biomass_ratio = std::clamp(
-            static_cast<float>(cell->get_biomass() / simulation_config::biomass::reproduction_min_biomass),
-            0.0f,
-            1.0f
+        double biomass_ratio = std::clamp(
+            cell->get_biomass() / simulation_config::biomass::reproduction_min_biomass,
+            0.0,
+            1.0
         );
-        float brightness = simulation_config::visualization::min_brightness +
+        double brightness = simulation_config::visualization::min_brightness +
             biomass_ratio * simulation_config::visualization::brightness_span;
         return applyBrightness(getBaseColor(), brightness);
     }
@@ -267,9 +267,9 @@ class AntibioticColorCell : public VisualizationCell {
 public:
     AntibioticColorCell(
         const std::shared_ptr<abstract_Biomass>& cell,
-        float nutrition,
-        float antibiotic,
-        float resistance
+        double nutrition,
+        double antibiotic,
+        double resistance
     )
         : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
@@ -278,22 +278,22 @@ public:
         if (cell != nullptr) {
             Color base = getBaseColor();
             // Яркость зависит от концентрации антибиотика (нормируем)
-            float conc = std::clamp(
-                static_cast<float>(antibiotic / simulation_config::antibiotic::visualization_normalizer),
-                0.0f,
-                1.0f
+            double conc = std::clamp(
+                antibiotic / simulation_config::antibiotic::visualization_normalizer,
+                0.0,
+                1.0
             );
             // Для живых клеток делаем цвет тусклее при высоком антибиотике (стресс)
-            float brightness = 1.0f - conc * 0.7f;  // от 1.0 до 0.3
-            brightness = std::clamp(brightness, 0.3f, 1.0f);
+            double brightness = 1.0 - conc * 0.7;  // от 1.0 до 0.3
+            brightness = std::clamp(brightness, 0.3, 1.0);
             return applyBrightness(base, brightness);
         }
         else {
             // Пустая клетка – показываем концентрацию антибиотика в синих тонах
-            float conc = std::clamp(
-                static_cast<float>(antibiotic / simulation_config::antibiotic::visualization_normalizer),
-                0.0f,
-                1.0f
+            double conc = std::clamp(
+                antibiotic / simulation_config::antibiotic::visualization_normalizer,
+                0.0,
+                1.0
             );
             // От чёрного (0) до ярко-синего (1)
             unsigned char intensity = static_cast<unsigned char>(conc * 255);
@@ -348,20 +348,20 @@ protected:
         auto environment = nucleus.situation_in_the_environment();
 
         double foodInEnvironment = environment.first;
-        float antibioticInEnvironment = environment.second;
+        double antibioticInEnvironment = environment.second;
 
-        float nutrition = std::clamp(
-            static_cast<float>(foodInEnvironment / simulation_config::visualization::modified_nutrition_normalizer),
-            0.0f,
-            1.0f
+        double nutrition = std::clamp(
+            foodInEnvironment / simulation_config::visualization::modified_nutrition_normalizer,
+            0.0,
+            1.0
         );
-        float antibiotic = std::clamp(
+        double antibiotic = std::clamp(
             antibioticInEnvironment,
-            0.0f,
-            static_cast<float>(simulation_config::antibiotic::visualization_normalizer)
+            0.0,
+            simulation_config::antibiotic::visualization_normalizer
         );
 
-        float resistance = 0.0f;
+        double resistance = 0.0;
         if (cell != nullptr) {
             resistance = cell->get_level_of_resistance();
         }

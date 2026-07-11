@@ -267,7 +267,7 @@ SimulationStats collectStats(const Field& field, int tick) {
 
             stats.totalFood += nucleus.get_food().get_amount();
 
-            const float antibiotic = nucleus.get_antibiotic().get_concentration();
+            const double antibiotic = nucleus.get_antibiotic().get_concentration();
             stats.avgAntibiotic += antibiotic;
             if (antibiotic > stats.maxAntibiotic) {
                 stats.maxAntibiotic = antibiotic;

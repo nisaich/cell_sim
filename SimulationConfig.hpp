@@ -71,8 +71,8 @@ namespace simulation_config {
         inline constexpr double decay_rate = 0.001;             // Деградация антибиотика за шаг
 
         // Добавление антибиотика
-        inline constexpr double concetration_for_next_step = 0.00003;  //сколько мы добавим на следующем ходу
-        inline constexpr double visualization_normalizer =  0.00003; // Нормировка для отображения концентрации
+        inline constexpr double concetration_for_next_step = 0.01;  //сколько мы добавим на следующем ходу
+        inline constexpr double visualization_normalizer =  0.02; // Нормировка для отображения концентрации
         inline constexpr double middle_value_of_antibiotic = 0.00003;  //среднее значение антибиотика после которого произойдёт добавление нового антибиотика
 
         // Параметры физиологической (адаптивной) резистентности

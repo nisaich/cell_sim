@@ -363,6 +363,7 @@ void Field::make_one_step(int number_of_step) {
     // Добавление пищи (точечное)
     if (number_of_step % simulation_config::field::steps_for_adding_food == 0) {
         add_some_food(simulation_config::field::count_of_adding_food);
+    }
 
     // Добавление антибиотика
     double sum_antibiotic = 0.0;
@@ -376,9 +377,7 @@ void Field::make_one_step(int number_of_step) {
 
     if (avg_antibiotic < middle_value_of_antibiotic) {
         add_antibiotic(concentration);
-        concentration += concetration_for_next_step;    
-        middle_value_of_antibiotic += concetration_for_next_step;
-      }
+        concentration += concetration_for_next_step;
     }
 
     std::vector<std::pair<int, int>> cells_for_this_step;

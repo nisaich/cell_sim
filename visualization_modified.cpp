@@ -406,7 +406,7 @@ static void drawAntibioticLegend(int x, int y) {
     DrawRectangleLines(x, y, barWidth, barHeight, GRAY);
 
     DrawText(
-        TextFormat("%.0f", simulation_config::antibiotic::visualization_normalizer),
+        TextFormat("%.2f", simulation_config::antibiotic::visualization_normalizer),
         x + barWidth + 6, y - 2, fontSize, DARKGRAY
     );
     DrawText("0", x + barWidth + 6, y + barHeight - fontSize + 2, fontSize, DARKGRAY);

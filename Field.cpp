@@ -413,7 +413,7 @@ void Field::make_one_step(int number_of_step) {
             continue;
         }
 
-        if (cell->must_he_die(nucleus.get_food(), nucleus.get_antibiotic())) {
+        if (cell->must_he_die(*this, position.first, position.second)) {
             nucleus.set_cell(std::make_shared<dead_Biomass>());
         }
         else {

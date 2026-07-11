@@ -21,8 +21,6 @@ namespace simulation_config {
         inline constexpr double greed_coefficient = 1.3;       // Насколько потенциальный доход должен превышать расходы для пробуждения
         inline constexpr int steps_for_waking_up = 3600;       // Время реактивации в секундах (1 час = 3600 секунд)
 
-        // --- ФИЗИЧЕСКИЙ СКЕЙЛИНГ ЕДЫ В БИОМАССУ ---
-        inline constexpr double food_to_biomass_scale = 3.03e-6;
     }
 
     namespace field {
@@ -42,16 +40,12 @@ namespace simulation_config {
         inline constexpr double count_of_adding_food = 100.0;
     }
 
-    namespace colony {
-        inline constexpr int initial_cells_start_x = field::width / 2;
-        inline constexpr int initial_cells_count = 10;
-        inline constexpr int initial_cells_y_from_bottom = 10;
-    }
+
 
     namespace biomass {
         inline constexpr double dispersion_chance = 0.01;
         inline constexpr int dispersion_radius = 5;
-        inline constexpr int steps_for_activating = 5000;
+
         inline constexpr int max_count_reps = 10000;
         inline constexpr double initial_biomass = 0.5;
         inline constexpr double max_biomass = 1.0;
@@ -68,7 +62,7 @@ namespace simulation_config {
 
     namespace antibiotic {
         inline constexpr double death_threshold = 0.5;
-        inline constexpr double death_probability_factor = 0.1; // Вероятность гибели при превышении порога
+
         inline constexpr double reproduction_penalty = 0.5;
         inline constexpr double stress_transition_chance = 0.05; // Вероятность перехода в спящее состояние из-за стресса
 
@@ -85,8 +79,7 @@ namespace simulation_config {
     namespace visualization {
         inline constexpr int initial_window_width = 1200;
         inline constexpr int initial_window_height = 900;
-        inline constexpr int screen_width = 1000;
-        inline constexpr int screen_height = 1000;
+
         inline constexpr int target_fps = 0;
         inline constexpr int steps_per_frame = 5;              // Количество шагов симуляции за один кадр отрисовки
 
@@ -97,7 +90,7 @@ namespace simulation_config {
 
         inline constexpr double min_brightness = 0.35;
         inline constexpr double brightness_span = 0.65;
-        inline constexpr double standard_nutrition_normalizer = 500; //field::initial_food * 0.01;
+
         inline constexpr double modified_nutrition_normalizer = 500; //field::initial_food;
 
         inline constexpr unsigned char empty_cell_blue_r = 0;
@@ -124,7 +117,7 @@ namespace simulation_config {
         inline constexpr int legend_y = 10;
         inline constexpr int legend_width = 18;
         inline constexpr int legend_height = 18;
-        inline constexpr int legend_spacing = 6;
+
         inline constexpr int legend_font_size = 15;
 
         // Режим цвета по умолчанию: "standard", "age", "resistance", "nutrition", "antibiotic"
@@ -140,7 +133,7 @@ namespace simulation_config {
         inline constexpr float chart_min_span = 1.0f;
         inline constexpr int text_font_size = 12;
         inline constexpr int title_font_size = 14;
-        inline constexpr int outer_margin = 20;
+
         inline constexpr int panel_padding = 12;
         inline constexpr int header_bottom = 160; // высота заголовка панели
         inline constexpr int section_gap = 8;     // отступ между графиками

@@ -28,25 +28,23 @@ double abstract_Biomass::get_biomass() const {
     return biomass;
 }
 
-bool abstract_Biomass::must_he_die(Food& food, const Antibiotic& antibiotic) const {
+bool abstract_Biomass::must_he_die(Field& current_field, int x, int y) const {
     if (age_of_cell >= max_age_of_cell || biomass <= 0.001) return true;
 
+    Cell& nucleus_ref = current_field.get_nucleus(x, y);
+
     // Смерть от голода (если биомасса ниже порога спячки и еды в среде нет)
-    if (biomass < simulation_config::monod::starvation_biomass_threshold && food.get_amount() <= 0.0) {
+    if (biomass < simulation_config::monod::starvation_biomass_threshold && nucleus_ref.get_food().get_amount() <= 0.0) {
         return true;
     }
 
     // Смерть от антибиотика
-    float conc = antibiotic.get_concentration();
+    float conc = nucleus_ref.get_antibiotic().get_concentration();
     float excess = conc - level_of_resistance;
     if (excess > 0.0f) {
         if (excess > simulation_config::antibiotic::death_threshold) {
-            static std::mt19937 gen(std::random_device{}());
-            std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-            float prob = (excess - static_cast<float>(simulation_config::antibiotic::death_threshold)) *
-                static_cast<float>(simulation_config::antibiotic::death_probability_factor);
-            prob = std::min(prob, 1.0f);
-            if (dist(gen) < prob) return true;
+            nucleus_ref.get_antibiotic().set_concentration(excess);
+            return true;
         }
     }
 

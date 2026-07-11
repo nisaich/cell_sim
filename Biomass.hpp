@@ -27,7 +27,7 @@ public:
     double get_biomass() const;
 
     // Теперь must_he_die принимает антибиотик
-    bool must_he_die(Food& food, const Antibiotic& antibiotic) const;
+    bool must_he_die(Field& current_field, int x, int y) const;
     void increase_age();
     void set_nucleus(Cell* current_nucleus);
 

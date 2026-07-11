@@ -71,9 +71,12 @@ void abstract_Biomass::consume_and_decay(Food& food) {
     double a = is_active_for_monod();
     double F = food.get_amount();
 
+    // Плата за активные эффлюксные насосы: чем выше ощить, тем медленнее клетка ест (fitness cost)
+    double fitness_penalty = 1.0 - simulation_config::antibiotic::fitness_cost_coef * level_of_resistance;
+
     double u = 0.0;
     if (F > 0.0) {
-        u = simulation_config::monod::U_max * (F / (simulation_config::monod::K_F + F)) * a;
+        u = simulation_config::monod::U_max * (F / (simulation_config::monod::K_F + F)) * a * fitness_penalty;
     }
 
     double u_dt = u * simulation_config::monod::delta_t;
@@ -108,6 +111,7 @@ void active_Biomass::consume_and_decay(Food& food) {
     abstract_Biomass::consume_and_decay(food);
     steps_active++;
 
+    // Переход в дормантное состояние при длительном голодании
     if (nucleus != nullptr && biomass < simulation_config::monod::starvation_biomass_threshold) {
         if (steps_active >= simulation_config::monod::steps_for_waking_up) {
             auto nonactive = std::make_shared<nonactive_Biomass>();
@@ -118,21 +122,28 @@ void active_Biomass::consume_and_decay(Food& food) {
         }
     }
 
-    if (nucleus != nullptr) {
-        float conc = nucleus->get_antibiotic().get_concentration();
-        float excess = conc - level_of_resistance;
-        if (excess > 0.0f) {
-            static std::mt19937 gen(std::random_device{}());
-            std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-            float chance = std::min(excess * 0.01f, static_cast<float>(simulation_config::antibiotic::stress_transition_chance));
-            if (dist(gen) < chance) {
-                auto nonactive = std::make_shared<nonactive_Biomass>();
-                copy_common_state_to(*nonactive);
-                nonactive->apply_dormancy_effects();
-                nucleus->set_cell(nonactive);
-                return;
-            }
-        }
+    if (nucleus == nullptr) return;
+
+    // Физиологическая адаптация резистентности (без деления, без случайности)
+    // Индукция (по закону Моно): есть антибиотик → поднимаем щиты
+    // Релаксация: нет антибиотика → возвращаемся к "дикому" уровню
+    float conc = nucleus->get_antibiotic().get_concentration();
+    float dt = static_cast<float>(simulation_config::monod::delta_t);
+    float r_default = simulation_config::biomass::default_resistance;
+
+    if (conc > 0.0f) {
+        // Режим индукции: насосы включаются пропорционально концентрации (закон Моно)
+        float delta_r = simulation_config::antibiotic::k_ind
+                        * (conc / (simulation_config::antibiotic::K_ind + conc))
+                        * (1.0f - level_of_resistance)
+                        * dt;
+        level_of_resistance = std::min(1.0f, level_of_resistance + delta_r);
+    } else {
+        // Режим релаксации: насосы отключаются, клетка возвращается к базовому состоянию
+        float delta_r = simulation_config::antibiotic::k_rec
+                        * (level_of_resistance - r_default)
+                        * dt;
+        level_of_resistance = std::max(r_default, level_of_resistance - delta_r);
     }
 }
 

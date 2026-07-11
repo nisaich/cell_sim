@@ -74,6 +74,13 @@ namespace simulation_config {
         inline constexpr float concetration_for_next_step = 0.01;  //сколько мы добавим на следующем ходу
         inline constexpr double visualization_normalizer = 1.0; // Нормировка для отображения концентрации
         inline constexpr float middle_value_of_antibiotic = 0.00003;  //среднее значение антибиотика после которого произойдёт добавление нового антибиотика
+
+        // Параметры физиологической (адаптивной) резистентности
+        // (механизмы эффлюксных насосов MexAB-OprM и регуляции поринов OprD у Pseudomonas)
+        inline constexpr float k_ind = 0.005f;         // Макс. скорость индукции (полная адаптация ~3-5 мин стресса)
+        inline constexpr float K_ind = 0.5f;           // Константа индукции: концентрация A, при которой запускается 50% мощности
+        inline constexpr float k_rec = 0.001f;         // Скорость релаксации (откат в 5x медленнее подъёма)
+        inline constexpr float fitness_cost_coef = 0.35f; // Штраф за активные насосы: при r=1 клетка ест на 35% медленнее
     }
 
     namespace visualization {

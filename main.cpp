@@ -33,7 +33,7 @@ int main() {
     }
     // -----------------------------------------------------
 
-    visualize(simulation_field, simulation_config::visualization::default_color_mode);
+    visualize(simulation_field);
 
     return 0;
 }

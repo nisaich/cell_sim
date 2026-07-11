@@ -71,7 +71,7 @@ namespace simulation_config {
         inline constexpr double decay_rate = 0.001;             // Деградация антибиотика за шаг
 
         // Добавление антибиотика
-        inline constexpr float concetration_for_next_step = 0.01;  //сколько мы добавим на следующем ходу
+        inline constexpr float concetration_for_next_step = 0.00003;  //сколько мы добавим на следующем ходу
         inline constexpr double visualization_normalizer = 1.0; // Нормировка для отображения концентрации
         inline constexpr float middle_value_of_antibiotic = 0.00003;  //среднее значение антибиотика после которого произойдёт добавление нового антибиотика
 
@@ -127,8 +127,6 @@ namespace simulation_config {
 
         inline constexpr int legend_font_size = 15;
 
-        // Режим цвета по умолчанию: "standard", "age", "resistance", "nutrition", "antibiotic"
-        inline constexpr const char* default_color_mode = "nutrition";
     }
 
     namespace graphs {

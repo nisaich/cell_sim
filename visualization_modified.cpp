@@ -306,28 +306,19 @@ public:
 class VisualizationBiomass {
 private:
     std::string shape;
-    float sizeX;
-    float sizeY;
-    CellColorMode colorMode;
 
 public:
-    VisualizationBiomass(
-        const std::string& shape,
-        float sizeX,
-        float sizeY,
-        CellColorMode colorMode
-    )
-        : shape(shape),
-        sizeX(sizeX),
-        sizeY(sizeY),
-        colorMode(colorMode) {}
+    explicit VisualizationBiomass(const std::string& shape)
+        : shape(shape) {}
 
     void draw(
         int width,
         int height,
         const std::vector<std::vector<Cell>>& field,
         float startX,
-        float startY
+        float startY,
+        float cellSize,
+        CellColorMode colorMode
     ) const {
         if (shape != "square") {
             return;
@@ -337,25 +328,21 @@ public:
             for (int x = 0; x < width; x++) {
                 const Cell& nucleus = field[y][x];
 
-                float drawX = startX + x * sizeX;
-                float drawY = startY + y * sizeY;
+                float drawX = startX + x * cellSize;
+                float drawY = startY + y * cellSize;
 
-                Color color = getCellColor(nucleus);
+                Color color = getCellColor(nucleus, colorMode);
 
-                drawSquare(drawX, drawY, color);
+                DrawRectangleRec(
+                    Rectangle{ drawX, drawY, cellSize, cellSize },
+                    color
+                );
             }
         }
     }
 
 protected:
-    void drawSquare(float x, float y, Color color) const {
-        DrawRectangleRec(
-            Rectangle{ x, y, sizeX, sizeY },
-            color
-        );
-    }
-
-    Color getCellColor(const Cell& nucleus) const {
+    Color getCellColor(const Cell& nucleus, CellColorMode colorMode) const {
         std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
         auto environment = nucleus.situation_in_the_environment();
@@ -402,22 +389,6 @@ protected:
     }
 };
 
-static CellColorMode getColorModeFromText(const std::string& colorMode) {
-    if (colorMode == "age") {
-        return CellColorMode::Age;
-    }
-    else if (colorMode == "resistance") {
-        return CellColorMode::Resistance;
-    }
-    else if (colorMode == "nutrition") {
-        return CellColorMode::Nutrition;
-    }
-    else if (colorMode == "antibiotic") {
-        return CellColorMode::Antibiotic;
-    }
-    return CellColorMode::Age;
-}
-
 static void drawAntibioticLegend(int x, int y) {
     const int barWidth = simulation_config::visualization::legend_width;
     const int barHeight = simulation_config::visualization::legend_height;
@@ -442,71 +413,41 @@ static void drawAntibioticLegend(int x, int y) {
     DrawText("Antibiotic", x, y + barHeight + 4, fontSize, DARKGRAY);
 }
 
-static float calculateBiomassSize(
-    int width,
-    int height,
-    int availableWidth,
-    int screenHeight
-) {
-    float cellSizeByWidth =
-        static_cast<float>(availableWidth) / static_cast<float>(width);
-    float cellSizeByHeight =
-        static_cast<float>(screenHeight) / static_cast<float>(height);
-    return std::min(cellSizeByWidth, cellSizeByHeight);
+static void drawPanelContainer(const char* title, int x, int y, int w, int h) {
+    // Рисуем рамку контейнера
+    DrawRectangle(x, y, w, h, RAYWHITE);
+    DrawRectangleLinesEx(Rectangle{ (float)x, (float)y, (float)w, (float)h }, 1.0f, LIGHTGRAY);
+    
+    // Рисуем заголовок панели
+    DrawRectangle(x, y, w, 24, Color{ 240, 240, 240, 255 });
+    DrawRectangleLinesEx(Rectangle{ (float)x, (float)y, (float)w, 24.0f }, 1.0f, LIGHTGRAY);
+    DrawText(title, x + 8, y + 5, 14, DARKGRAY);
 }
 
 void visualize(
-    Field& simulation_field,
-    const std::string& colorMode) {
+    Field& simulation_field) {
     std::signal(SIGINT, sigint_handler);
 
     int width = simulation_field.get_width();
     int height = simulation_field.get_height();
 
+    // Разрешаем изменение размеров всего окна
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(
-        simulation_config::visualization::initial_window_width,
-        simulation_config::visualization::initial_window_height,
-        "Biomass visualization"
+        1200,
+        900,
+        "Biomass Multi-Panel Visualization"
     );
 
     int monitor = GetCurrentMonitor();
-    const int graphPanelWidth = simulation_config::visualization::graph_panel_width;
-    const int contentGap = simulation_config::visualization::modified_content_gap;
-
-    int maxScreenWidth = GetMonitorWidth(monitor) -
-        simulation_config::visualization::modified_window_screen_margin;
-    int maxScreenHeight = GetMonitorHeight(monitor) -
-        simulation_config::visualization::modified_window_screen_margin;
-
-    float cellSize = calculateBiomassSize(
-        width,
-        height,
-        maxScreenWidth - graphPanelWidth - contentGap,
-        maxScreenHeight
-    );
-
-    int windowWidth = static_cast<int>(width * cellSize) + graphPanelWidth + contentGap;
-    int windowHeight = static_cast<int>(height * cellSize);
-
-    SetWindowSize(windowWidth, windowHeight);
-
-    int windowPosX = (GetMonitorWidth(monitor) - windowWidth) / 2;
-    int windowPosY = (GetMonitorHeight(monitor) - windowHeight) / 2;
+    int windowPosX = (GetMonitorWidth(monitor) - 1200) / 2;
+    int windowPosY = (GetMonitorHeight(monitor) - 900) / 2;
     SetWindowPosition(windowPosX, windowPosY);
 
     SetTargetFPS(simulation_config::visualization::target_fps);
 
-    float startX = 0.0f;
-    float startY = 0.0f;
+    VisualizationBiomass visualizationBiomass("square");
 
-    CellColorMode mode = getColorModeFromText(colorMode);
-
-    VisualizationBiomass visualizationBiomass(
-        "square",
-        cellSize,
-        cellSize,
-        mode
-    );
     const std::string statsPath = "simulation_stats.csv";
     CsvStatsRecorder statsRecorder(statsPath);
     StatsHistory statsHistory;
@@ -536,31 +477,58 @@ void visualize(
         }
         statsHistory.record(simulation_field, tick);
 
+        // Получаем размеры окна в реальном времени при ресайзе
+        int screenWidth = GetScreenWidth();
+        int screenHeight = GetScreenHeight();
+
+        // Сетка 2x2 с отступами по 4 пикселя
+        int panel1_x = 4;
+        int panel1_y = 4;
+        int panel1_w = screenWidth / 2 - 6;
+        int panel1_h = screenHeight / 2 - 6;
+
+        int panel2_x = screenWidth / 2 + 2;
+        int panel2_y = 4;
+        int panel2_w = screenWidth / 2 - 6;
+        int panel2_h = screenHeight / 2 - 6;
+
+        int panel3_x = 4;
+        int panel3_y = screenHeight / 2 + 2;
+        int panel3_w = screenWidth / 2 - 6;
+        int panel3_h = screenHeight / 2 - 6;
+
+        int panel4_x = screenWidth / 2 + 2;
+        int panel4_y = screenHeight / 2 + 2;
+        int panel4_w = screenWidth / 2 - 6;
+        int panel4_h = screenHeight / 2 - 6;
+
         BeginDrawing();
+        ClearBackground(Color{ 220, 220, 220, 255 }); // Серый фон между панелями
 
-        ClearBackground(RAYWHITE);
+        // 1. Панель еды (Top-Left)
+        drawPanelContainer("Food Concentration (Nutrition)", panel1_x, panel1_y, panel1_w, panel1_h);
+        float cell1 = std::min((float)(panel1_w - 16) / width, (float)(panel1_h - 24 - 16) / height);
+        float start1_x = panel1_x + 8.0f + (panel1_w - 16 - width * cell1) / 2.0f;
+        float start1_y = panel1_y + 24.0f + 8.0f + (panel1_h - 24 - 16 - height * cell1) / 2.0f;
+        visualizationBiomass.draw(width, height, simulation_field.get_field(), start1_x, start1_y, cell1, CellColorMode::Nutrition);
 
-        visualizationBiomass.draw(
-            width,
-            height,
-            simulation_field.get_field(),
-            startX,
-            startY
-        );
+        // 2. Панель антибиотика (Top-Right)
+        drawPanelContainer("Antibiotic Concentration", panel2_x, panel2_y, panel2_w, panel2_h);
+        float cell2 = std::min((float)(panel2_w - 16) / width, (float)(panel2_h - 24 - 16) / height);
+        float start2_x = panel2_x + 8.0f + (panel2_w - 16 - width * cell2) / 2.0f;
+        float start2_y = panel2_y + 24.0f + 8.0f + (panel2_h - 24 - 16 - height * cell2) / 2.0f;
+        visualizationBiomass.draw(width, height, simulation_field.get_field(), start2_x, start2_y, cell2, CellColorMode::Antibiotic);
+        drawAntibioticLegend(static_cast<int>(panel2_x + 12), static_cast<int>(panel2_y + 36));
 
-        if (mode == CellColorMode::Antibiotic) {
-            drawAntibioticLegend(
-                simulation_config::visualization::legend_x,
-                simulation_config::visualization::legend_y
-            );
-        }
+        // 3. Панель возраста клеток (Bottom-Left)
+        drawPanelContainer("Cells (Age & State)", panel3_x, panel3_y, panel3_w, panel3_h);
+        float cell3 = std::min((float)(panel3_w - 16) / width, (float)(panel3_h - 24 - 16) / height);
+        float start3_x = panel3_x + 8.0f + (panel3_w - 16 - width * cell3) / 2.0f;
+        float start3_y = panel3_y + 24.0f + 8.0f + (panel3_h - 24 - 16 - height * cell3) / 2.0f;
+        visualizationBiomass.draw(width, height, simulation_field.get_field(), start3_x, start3_y, cell3, CellColorMode::Age);
 
-        statsHistory.draw(
-            static_cast<int>(width * cellSize + contentGap),
-            0,
-            graphPanelWidth,
-            windowHeight
-        );
+        // 4. Панель графиков (Bottom-Right)
+        statsHistory.draw(panel4_x, panel4_y, panel4_w, panel4_h);
 
         EndDrawing();
     }

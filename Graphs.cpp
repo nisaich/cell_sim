@@ -306,19 +306,21 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
         LIGHTGRAY
     );
 
+    int text_y = y + simulation_config::graphs::panel_padding;
     DrawText(
         "Simulation Graphs",
         x + simulation_config::graphs::panel_padding,
-        y + simulation_config::graphs::panel_padding,
+        text_y,
         simulation_config::graphs::title_font_size,
         BLACK
     );
+    text_y += 18;
 
     if (history.empty()) {
         DrawText(
             "No stats yet",
             x + simulation_config::graphs::panel_padding,
-            y + 44,
+            text_y,
             simulation_config::graphs::text_font_size,
             GRAY
         );
@@ -329,35 +331,41 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
     DrawText(
         TextFormat("Tick: %i  Live: %lli  Dead: %lli", latest.tick, latest.liveCells, latest.deadCells),
         x + simulation_config::graphs::panel_padding,
-        y + 42,
+        text_y,
         simulation_config::graphs::text_font_size,
         DARKGRAY
     );
+    text_y += 16;
+
     DrawText(
         TextFormat("Avg food: %.2f  Height: %i", latest.avgFood, latest.maxHeight),
         x + simulation_config::graphs::panel_padding,
-        y + 62,
+        text_y,
         simulation_config::graphs::text_font_size,
         DARKGRAY
     );
+    text_y += 16;
+
     DrawText(
-        TextFormat("Antibiotic avg: %.2f  max: %.2f", latest.avgAntibiotic, latest.maxAntibiotic),
+        TextFormat("Antibiotic avg: %.5f  max: %.5f", latest.avgAntibiotic, latest.maxAntibiotic),
         x + simulation_config::graphs::panel_padding,
-        y + 78,
+        text_y,
         simulation_config::graphs::text_font_size,
         DARKBLUE
     );
+    text_y += 16;
+
     DrawText(
         TextFormat("Avg biomass: %.3f", latest.avgBiomass),
         x + simulation_config::graphs::panel_padding,
-        y + 94,
+        text_y,
         simulation_config::graphs::text_font_size,
         DARKGREEN
     );
+    text_y += 16;
 
-    const int chartsTop = y + simulation_config::graphs::header_bottom;
-    const int chartsHeight = height - simulation_config::graphs::header_bottom -
-        simulation_config::graphs::panel_padding - 16; // 16 for extra header line
+    const int chartsTop = text_y + 10;
+    const int chartsHeight = height - (chartsTop - y) - simulation_config::graphs::panel_padding;
     const int chartHeight = (chartsHeight - 5 * simulation_config::graphs::section_gap) / 6;
     const int chartWidth = width - 2 * simulation_config::graphs::panel_padding;
 

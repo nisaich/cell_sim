@@ -113,7 +113,9 @@ void active_Biomass::consume_and_decay(Food& food) {
 
     // Переход в дормантное состояние при длительном голодании
     if (nucleus != nullptr && biomass < simulation_config::monod::starvation_biomass_threshold) {
-        if (steps_active >= simulation_config::monod::steps_for_waking_up) {
+        int ticks_needed = static_cast<int>(simulation_config::monod::steps_for_waking_up / simulation_config::monod::delta_t);
+        if (ticks_needed < 1) ticks_needed = 1;
+        if (steps_active >= ticks_needed) {
             auto nonactive = std::make_shared<nonactive_Biomass>();
             copy_common_state_to(*nonactive);
             nonactive->apply_dormancy_effects();
@@ -144,6 +146,23 @@ void active_Biomass::consume_and_decay(Food& food) {
                         * (level_of_resistance - r_default)
                         * dt;
         level_of_resistance = std::max(r_default, level_of_resistance - delta_r);
+    }
+
+    // Переход в спящее состояние из-за стресса от антибиотика
+    float excess = conc - level_of_resistance;
+    if (excess > 0.0f) {
+        static std::mt19937 gen(std::random_device{}());
+        std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+        float base_chance = std::min(excess * 0.01f, static_cast<float>(simulation_config::antibiotic::stress_transition_chance));
+        // Адаптация вероятности к размеру шага dt
+        float adjusted_chance = 1.0f - std::pow(1.0f - base_chance, dt);
+        if (dist(gen) < adjusted_chance) {
+            auto nonactive = std::make_shared<nonactive_Biomass>();
+            copy_common_state_to(*nonactive);
+            nonactive->apply_dormancy_effects();
+            nucleus->set_cell(nonactive);
+            return;
+        }
     }
 }
 
@@ -262,7 +281,9 @@ bool nonactive_Biomass::reproduction(Field& current_field, int x, int y) {
         double threshold = simulation_config::monod::m_act * simulation_config::monod::delta_t * biomass * simulation_config::monod::greed_coefficient;
 
         if (potential_income > threshold) {
-            steps_until_wakeup = simulation_config::monod::steps_for_waking_up;
+            int ticks_needed = static_cast<int>(simulation_config::monod::steps_for_waking_up / simulation_config::monod::delta_t);
+            if (ticks_needed < 1) ticks_needed = 1;
+            steps_until_wakeup = ticks_needed;
         }
     }
 

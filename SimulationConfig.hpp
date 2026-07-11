@@ -88,7 +88,7 @@ namespace simulation_config {
         inline constexpr int initial_window_height = 900;
 
         inline constexpr int target_fps = 0;
-        inline constexpr int steps_per_frame = 5;              // Количество шагов симуляции за один кадр отрисовки
+        inline constexpr int steps_per_frame = 500;              // Количество шагов симуляции за один кадр отрисовки
 
         inline constexpr int graph_panel_width = 400;
         inline constexpr int modified_content_gap = 20;

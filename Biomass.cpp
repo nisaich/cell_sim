@@ -29,18 +29,27 @@ double abstract_Biomass::get_biomass() const {
 }
 
 bool abstract_Biomass::must_he_die(Food& food, const Antibiotic& antibiotic) const {
-    if (age_of_cell >= max_age_of_cell || biomass <= 0.001f) return true;
+    if (age_of_cell >= max_age_of_cell || biomass <= 0.001) return true;
 
+    // Смерть от голода (если биомасса ниже порога спячки и еды в среде нет)
+    if (biomass < simulation_config::monod::starvation_biomass_threshold && food.get_amount() <= 0.0) {
+        return true;
+    }
+
+    // Смерть от антибиотика
     float conc = antibiotic.get_concentration();
     float excess = conc - level_of_resistance;
-    if (excess > simulation_config::antibiotic::death_threshold) {
-        static std::mt19937 gen(std::random_device{}());
-        std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-        float prob = (excess - simulation_config::antibiotic::death_threshold) *
-            simulation_config::antibiotic::death_probability_factor;
-        prob = std::min(prob, 1.0f);
-        if (dist(gen) < prob) return true;
+    if (excess > 0.0f) {
+        if (excess > simulation_config::antibiotic::death_threshold) {
+            static std::mt19937 gen(std::random_device{}());
+            std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+            float prob = (excess - static_cast<float>(simulation_config::antibiotic::death_threshold)) *
+                static_cast<float>(simulation_config::antibiotic::death_probability_factor);
+            prob = std::min(prob, 1.0f);
+            if (dist(gen) < prob) return true;
+        }
     }
+
     return false;
 }
 
@@ -83,7 +92,7 @@ void abstract_Biomass::consume_and_decay(Food& food) {
     biomass = std::max(0.0, biomass * (1.0 - m * simulation_config::monod::delta_t));
 }
 
-bool abstract_Biomass::reproduction(Field& current_field, int x, int y) {
+bool abstract_Biomass::reproduction(Field& /*current_field*/, int /*x*/, int /*y*/) {
     return false;
 }
 
@@ -159,13 +168,7 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     float child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
     biomass = biomass - child_biomass;
 
-    std::uniform_real_distribution<float> mutation_dist(-0.05f, 0.05f);
-    float mutation = mutation_dist(generator);
-    float child_resistance = level_of_resistance + mutation;
-    if (child_resistance < 0.0f) child_resistance = 0.0f;
-    if (child_resistance > 1.0f) child_resistance = 1.0f;
-
-    auto child = std::make_shared<active_Biomass>(child_resistance, max_age_of_cell);
+    auto child = std::make_shared<active_Biomass>(level_of_resistance, max_age_of_cell);
     child->biomass = child_biomass;
 
     // ---- ЛОГИКА ПРЫЖКА (DISPERSION) ----

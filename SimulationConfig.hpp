@@ -73,13 +73,13 @@ namespace simulation_config {
         inline constexpr double stress_transition_chance = 0.05; // Вероятность перехода в спящее состояние из-за стресса
 
         // Диффузия антибиотика
-        inline constexpr double diffusion_coeff = 0.1;
+        inline constexpr double diffusion_coeff = 0.01;
         inline constexpr double decay_rate = 0.001;             // Деградация антибиотика за шаг
 
         // Добавление антибиотика
         inline constexpr float concetration_for_next_step = 0.01;  //сколько мы добавим на следующем ходу
         inline constexpr double visualization_normalizer = 1.0; // Нормировка для отображения концентрации
-        inline constexpr float middle_value_of_antibiotic = 0.3;  //среднее значение антибиотика после которого произойдёт добавление нового антибиотика
+        inline constexpr float middle_value_of_antibiotic = 0.00003;  //среднее значение антибиотика после которого произойдёт добавление нового антибиотика
     }
 
     namespace visualization {
@@ -88,7 +88,7 @@ namespace simulation_config {
         inline constexpr int screen_width = 1000;
         inline constexpr int screen_height = 1000;
         inline constexpr int target_fps = 0;
-        inline constexpr int steps_per_frame = 500;              // Количество шагов симуляции за один кадр отрисовки
+        inline constexpr int steps_per_frame = 5;              // Количество шагов симуляции за один кадр отрисовки
 
         inline constexpr int graph_panel_width = 400;
         inline constexpr int modified_content_gap = 20;

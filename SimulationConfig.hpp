@@ -39,7 +39,7 @@ namespace simulation_config {
         inline constexpr double D = 1.0 / 600.0; //используется в food_diffusion_coeff
         inline constexpr double food_diffusion_coeff = 0.20;//field::D * monod::delta_t;   // Быстрая диффузия для адекватного перераспределения
         inline constexpr int steps_for_adding_food = 1000;
-        inline constexpr double count_of_adding_food = 100000.0;
+        inline constexpr double count_of_adding_food = 100.0;
     }
 
     namespace colony {
@@ -77,9 +77,9 @@ namespace simulation_config {
         inline constexpr double decay_rate = 0.001;             // Деградация антибиотика за шаг
 
         // Добавление антибиотика
-        inline constexpr int adding_interval = 1000000;         // Очень редко (фактически — никогда по умолчанию)
-        inline constexpr double adding_concentration = 0.0;
+        inline constexpr float concetration_for_next_step = 0.01;  //сколько мы добавим на следующем ходу
         inline constexpr double visualization_normalizer = 1.0; // Нормировка для отображения концентрации
+        inline constexpr float middle_value_of_antibiotic = 0.3;  //среднее значение антибиотика после которого произойдёт добавление нового антибиотика
     }
 
     namespace visualization {

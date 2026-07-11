@@ -74,7 +74,6 @@ void Field::init_environment(float initial_food) {
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             get_nucleus(x, y).get_food().set_amount(initial_food);
-            get_nucleus(x, y).get_antibiotic().set_concentration(0.0f);
         }
     }
 }
@@ -85,10 +84,10 @@ void Field::add_some_food(int count_of_adding_food) {
     get_nucleus(center, 0).get_food().add(count_of_adding_food);
 }
 
-void Field::add_antibiotic(float concentration, int x, int y) {
-    if (is_x_inside(x) && is_y_inside(y)) {
-        get_nucleus(x, y).get_antibiotic().add(concentration);
-    }
+void Field::add_antibiotic(float concentration) {
+  for (int x = 0; x < width; x++){  //добавляем только по самой верхней строчке, так и должно быть
+    get_nucleus(x, 0).get_antibiotic().add(concentration);
+  }
 }
 
 static void diffuse_grid_adi(std::vector<std::vector<double>>& grid, double D, double dt, double decay_rate = 0.0) {
@@ -367,12 +366,19 @@ void Field::make_one_step(int number_of_step) {
     }
 
     // Добавление антибиотика
-    if (number_of_step % simulation_config::antibiotic::adding_interval == 0) {
-        add_antibiotic(
-            simulation_config::antibiotic::adding_concentration,
-            width / 2,
-            0
-        );
+    double sum_antibiotic = 0.0;
+#pragma omp parallel for reduction(+:sum_antibiotic) collapse(2) schedule(static)
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            sum_antibiotic += get_nucleus(x, y).get_antibiotic().get_concentration();
+        }
+    }
+    double avg_antibiotic = sum_antibiotic / (width * height);
+
+    if (avg_antibiotic < middle_value_of_antibiotic) {
+        add_antibiotic(concentration);
+        concentration += concetration_for_next_step;    
+        middle_value_of_antibiotic += concetration_for_next_step;
     }
 
     std::vector<std::pair<int, int>> cells_for_this_step;

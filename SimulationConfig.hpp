@@ -2,36 +2,6 @@
 
 namespace simulation_config {
 
-    // ============================================================
-    // СЦЕНАРИЙ: Древовидная (ветвистая) структура биоплёнки (Dendritic Pattern)
-    // ============================================================
-    // Причина ветвления в физике роста микроколоний — Diffusion-Limited Growth (DLG).
-    // Если питательных веществ мало (голодный режим) и диффузия медленная,
-    // клетки на поверхности съедают всю пищу до того, как она проникнет вглубь.
-    // В итоге растут только выдающиеся наружу "пальцы" или ветви, стремящиеся к пище.
-    //
-    // ВАЖНО: направленность роста здесь дополнительно усилена тем, что
-    // active_Biomass::reproduction() в Biomass.cpp выбирает для потомка
-    // СВОБОДНОГО СОСЕДА С МАКСИМУМОМ ЕДЫ (хемотаксис) — это прямой аналог
-    // моделей ветвящегося роста Ben-Jacob/Ohgiwari для Bacillus subtilis.
-    //
-    // ПРЕДУПРЕЖДЕНИЕ О ГЕОМЕТРИИ ИСТОЧНИКА:
-    // Field::add_some_food() льёт еду ТОЛЬКО в одну точку (центр верхней строки).
-    // Это значит, что все ветви со временем стягиваются к одной точке —
-    // получится скорее сходящийся "корень/молния", а не расходящаяся крона.
-    // Если нужна именно расходящаяся крона — источник еды нужно менять в Field.cpp
-    // (лить по всей верхней строке или из нескольких точек), конфигом это не лечится.
-    //
-    // Настройки для этого режима:
-    // 1. Исходные константы Monod полностью сохранены (K_F = 1500.0, U_max = 0.48/3600).
-    // 2. Лимит жизни клетки равен ровно 2 суткам: default_max_age = 2880 тиков.
-    // 3. Биомасса клеток масштабирована вниз (порог деления 0.18, старт 0.15, спячка 0.08).
-    //    Это позволяет клеткам делиться при низком уровне еды (около 80-100 мг/л), преодолевая
-    //    ограничение равновесия Monod.
-    // 4. Начальная еда — 100.0, диффузия медленная (0.008) и применяется реже (раз в 8 тиков),
-    //    чтобы локальные градиенты еды вокруг растущих кончиков не размывались слишком быстро.
-    // ============================================================
-
     namespace monod {
         // Один тик симуляции равен ровно 60.0 секундам (дискретный dt в формулах Monod).
         inline constexpr double delta_t = 60.0;
@@ -48,8 +18,7 @@ namespace simulation_config {
         inline constexpr double starvation_biomass_threshold = 0.08; // Порог биомассы для засыпания (снижен под мелкие клетки)
         inline constexpr double starvation_steps_threshold   = 100000.0; // Засыпаем, если еды хватит менее чем на 100 000 шагов
         inline constexpr double greed_coefficient = 1.3;       // Насколько потенциальный доход должен превышать расходы для пробуждения
-        inline constexpr int steps_for_waking_up = 60;         // Время реактивации/засыпания в тиках (при delta_t=60 это ровно 1 тик —
-                                                                // клетка реагирует на голод/сытость почти мгновенно)
+        inline constexpr int steps_for_waking_up = 60;         // Время реактивации/засыпания в тиках
     }
 
     namespace field {
@@ -57,7 +26,7 @@ namespace simulation_config {
         inline constexpr int height = 200;
 
         // Начальная концентрация для старта
-        inline constexpr double initial_food = 800.0;
+        inline constexpr double initial_food = 400.0;
 
         // Медленная диффузия глюкозы для образования градиента.
         // Понижено с 0.012 до 0.008 для более резких локальных градиентов вокруг кончиков роста.
@@ -65,7 +34,7 @@ namespace simulation_config {
 
         // Добавление еды только сверху (см. предупреждение выше про геометрию источника)
         inline constexpr int    steps_for_adding_food = 30;
-        inline constexpr double count_of_adding_food  = 4000.0;
+        inline constexpr double count_of_adding_food  = 400.0;
     }
 
     namespace biomass {
@@ -78,9 +47,8 @@ namespace simulation_config {
         inline constexpr double child_biomass_ratio = 0.5;
         inline constexpr double reproduction_min_biomass = 0.3; // низкий порог деления, чтобы делились при низком питании
 
-        // Клетка живёт ровно 2 суток (2880 тиков при delta_t=60)
         inline constexpr int    default_max_age = 4320;  //3 суток
-        inline constexpr double default_resistance = 0.000015;
+        inline constexpr double default_resistance = 0.0025;
 
         inline constexpr double nonactive_resistance_multiplier = 100.0;
         inline constexpr double nonactive_max_life_multiplier   = 100.0;
@@ -99,7 +67,7 @@ namespace simulation_config {
         inline constexpr double decay_rate = 0.001;
 
         // Антибиотик в этом сценарии отключён (сценарий про ветвление, не про резистентность)
-        inline constexpr double concetration_for_next_step = 0.02;
+        inline constexpr double concetration_for_next_step = 0.015;
         inline constexpr double middle_value_of_antibiotic = 0.3;
         inline constexpr double visualization_normalizer   = antibiotic::concetration_for_next_step; //1.0;
 

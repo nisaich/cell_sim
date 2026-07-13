@@ -462,6 +462,8 @@ void visualize(
     total_ticks_counter = 0;
 
     while (!WindowShouldClose()) {
+        bool was_running = simulation_field.has_living_cells();
+
         for (int i = 0; i < simulation_config::visualization::steps_per_frame; ++i) {
             if (simulation_field.has_living_cells()) {
                 simulation_field.make_one_step(tick);
@@ -472,10 +474,12 @@ void visualize(
             }
         }
 
-        if (statsRecorder.is_open()) {
-            statsRecorder.record(simulation_field, tick);
+        if (was_running) {
+            if (statsRecorder.is_open()) {
+                statsRecorder.record(simulation_field, tick);
+            }
+            statsHistory.record(simulation_field, tick);
         }
-        statsHistory.record(simulation_field, tick);
 
         // Получаем размеры окна в реальном времени при ресайзе
         int screenWidth = GetScreenWidth();

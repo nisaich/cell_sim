@@ -12,9 +12,11 @@ namespace simulation_config {
     //
     // Настройки для этого режима:
     // 1. Исходные константы Monod полностью сохранены (K_F = 1500.0, U_max = 0.48/3600).
-    // 2. Начальная еда: initial_food = 380.0 (при K_F = 1500.0 это дает предел биомассы ~0.9, что позволяет начальным клеткам делиться).
-    // 3. Очень медленная диффузия глюкозы: food_diffusion_coeff = 0.003 (создает резкий локальный дефицит после выедания).
-    // 4. Обильный приток питания сверху: count_of_adding_food = 500.0 каждые 100 шагов (поддерживает деление растущих верхушек ветвей).
+    // 2. Лимит жизни клетки равен ровно 2 суткам: default_max_age = 2880 тиков.
+    // 3. Биомасса клеток масштабирована вниз (порог деления 0.18, старт 0.15, спячка 0.08).
+    //    Это позволяет клеткам делиться при низком уровне еды (около 80-100 мг/л), преодолевая 
+    //    ограничение равновесия Monod.
+    // 4. Начальная еда выставлена в 100.0, диффузия медленная (0.012), частый приток сверху (+600.0).
     // ============================================================
 
     namespace monod {
@@ -30,7 +32,7 @@ namespace simulation_config {
         inline constexpr double K_F = 1500.0;                  // Полунасыщение глюкозы для Pseudomonas (мкг/л)
         inline constexpr double Y_B_F = 0.45;                  // Коэффициент выхода биомассы (Yield)
 
-        inline constexpr double starvation_biomass_threshold = 0.2; // Порог биомассы для засыпания
+        inline constexpr double starvation_biomass_threshold = 0.08; // Снижен порог для мелкомасштабных клеток
         inline constexpr double greed_coefficient = 1.3;       // Насколько потенциальный доход должен превышать расходы для пробуждения
         inline constexpr int steps_for_waking_up = 60;
     }
@@ -39,15 +41,15 @@ namespace simulation_config {
         inline constexpr int width  = 100;
         inline constexpr int height = 200;
 
-        // Достаточная начальная концентрация для старта роста и деления при K_F = 1500.0
-        inline constexpr double initial_food         = 380.0; 
+        // Начальная концентрация для старта
+        inline constexpr double initial_food         = 100.0; 
 
-        // Экстремально низкая диффузия для DLG-режима
-        inline constexpr double food_diffusion_coeff = 0.003; 
+        // Медленная диффузия глюкозы для образования градиента
+        inline constexpr double food_diffusion_coeff = 0.012; 
 
-        // Частое добавление еды только сверху
-        inline constexpr int    steps_for_adding_food  = 100;
-        inline constexpr double count_of_adding_food   = 500.0; 
+        // Добавление еды только сверху
+        inline constexpr int    steps_for_adding_food  = 80;
+        inline constexpr double count_of_adding_food   = 600.0; 
     }
 
     namespace biomass {
@@ -55,11 +57,13 @@ namespace simulation_config {
         inline constexpr int    dispersion_radius  = 5;
 
         inline constexpr int    max_count_reps     = 10000;
-        inline constexpr double initial_biomass    = 0.5;
-        inline constexpr double max_biomass        = 1.0;
+        inline constexpr double initial_biomass    = 0.15; // масштабировано под низкий порог деления
+        inline constexpr double max_biomass        = 0.5;
         inline constexpr double child_biomass_ratio      = 0.5;
-        inline constexpr double reproduction_min_biomass = 0.7;
-        inline constexpr int    default_max_age    = 1000000;
+        inline constexpr double reproduction_min_biomass = 0.18; // низкий порог деления, чтобы делились при низком питании
+        
+        // Клетка живет ровно 2 суток (2880 минут)
+        inline constexpr int    default_max_age    = 2880; 
         inline constexpr double default_resistance = 0.000015;
 
         inline constexpr double nonactive_resistance_multiplier = 2.0;

@@ -356,7 +356,7 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
-    std::vector<std::pair<int, int>> cells_for_this_step = active_cells;
+    cells_for_this_step = active_cells;
 
     // Проверка смерти
 #pragma omp parallel for schedule(static)
@@ -398,34 +398,34 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
-    // Фильтруем active_cells (убираем те, что умерли, и перемещаем их в dead_cells)
-    std::vector<std::pair<int, int>> next_active_cells;
-    next_active_cells.reserve(active_cells.size());
-    for (const auto& pos : active_cells) {
+    // Фильтруем active_cells на месте (убираем те, что умерли, и перемещаем их в dead_cells)
+    size_t write_idx = 0;
+    for (size_t read_idx = 0; read_idx < active_cells.size(); ++read_idx) {
+        const auto& pos = active_cells[read_idx];
         auto cell = get_nucleus(pos.first, pos.second).get_cell();
         if (cell != nullptr) {
             if (cell->is_alive()) {
-                next_active_cells.push_back(pos);
+                active_cells[write_idx++] = pos;
             } else {
                 dead_cells.push_back(pos);
             }
         }
     }
-    active_cells = std::move(next_active_cells);
+    active_cells.resize(write_idx);
 
     // Обрабатываем растворение мертвых клеток
     process_dead_cells_disappearance();
 
-    // Фильтруем dead_cells (убираем те, что полностью исчезли)
-    std::vector<std::pair<int, int>> next_dead_cells;
-    next_dead_cells.reserve(dead_cells.size());
-    for (const auto& pos : dead_cells) {
+    // Фильтруем dead_cells на месте (убираем те, что полностью исчезли)
+    size_t write_dead_idx = 0;
+    for (size_t read_idx = 0; read_idx < dead_cells.size(); ++read_idx) {
+        const auto& pos = dead_cells[read_idx];
         auto cell = get_nucleus(pos.first, pos.second).get_cell();
         if (cell != nullptr && !cell->is_alive()) {
-            next_dead_cells.push_back(pos);
+            dead_cells[write_dead_idx++] = pos;
         }
     }
-    dead_cells = std::move(next_dead_cells);
+    dead_cells.resize(write_dead_idx);
 }
 
 const std::vector<Cell>& Field::get_field() const {

@@ -53,6 +53,7 @@ private:
     std::vector<double> temp_grid;
     std::vector<double> food_grid;
     std::vector<double> antibiotic_grid;
+    std::vector<std::pair<int, int>> cells_for_this_step;
 
     void process_dead_cells_disappearance();
 

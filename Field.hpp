@@ -72,7 +72,7 @@ public:
     void diffuse_all();
 
     void init_environment(
-        double initial_food = simulation_config::field::default_initial_food
+        double initial_food = 0.0
     );
     void add_some_food(
         int count_of_adding_food = simulation_config::field::count_of_adding_food

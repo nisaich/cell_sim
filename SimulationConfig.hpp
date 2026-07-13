@@ -138,6 +138,7 @@ namespace simulation_config {
         inline constexpr double chart_min_span = 1.0;
         inline constexpr int text_font_size = 12;
         inline constexpr int title_font_size = 14;
+        inline constexpr int max_displayed_points = 300;
 
         inline constexpr int panel_padding = 12;
         inline constexpr int header_bottom = 160; // высота заголовка панели

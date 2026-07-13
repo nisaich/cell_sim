@@ -11,6 +11,7 @@ namespace {
 template<typename GetterA, typename GetterB>
 void drawSeries(
     const std::vector<SimulationStats>& history,
+    size_t start_idx,
     Rectangle area,
     GetterA getValueA,
     Color colorA,
@@ -31,7 +32,7 @@ void drawSeries(
         LIGHTGRAY
     );
 
-    if (history.size() < 2) {
+    if (history.size() - start_idx < 2) {
         DrawText(
             "Not enough data",
             area.x + 10,
@@ -42,12 +43,14 @@ void drawSeries(
         return;
     }
 
-    float minValue = getValueA(history.front());
-    float maxValue = getValueA(history.front());
+    size_t range_size = history.size() - start_idx;
 
-    for (const auto& stats : history) {
-        float valA = getValueA(stats);
-        float valB = getValueB(stats);
+    float minValue = getValueA(history[start_idx]);
+    float maxValue = getValueA(history[start_idx]);
+
+    for (size_t i = start_idx; i < history.size(); ++i) {
+        float valA = getValueA(history[i]);
+        float valB = getValueB(history[i]);
         minValue = std::min(minValue, std::min(valA, valB));
         maxValue = std::max(maxValue, std::max(valA, valB));
     }
@@ -70,16 +73,16 @@ void drawSeries(
     DrawLine(left, top, left, bottom, GRAY);
 
     auto drawLineForValues = [&](auto getValue, Color color) {
-        size_t step = std::max<size_t>(1, history.size() / static_cast<size_t>(graphWidth));
-        size_t prev_idx = 0;
-        for (size_t i = step; i < history.size(); i += step) {
+        size_t step = std::max<size_t>(1, range_size / static_cast<size_t>(graphWidth));
+        size_t prev_idx = start_idx;
+        for (size_t i = start_idx + step; i < history.size(); i += step) {
             if (i + step >= history.size()) {
                 i = history.size() - 1; // ensure we draw the last point
             }
-            const float prevX = left + graphWidth * static_cast<float>(prev_idx) /
-                static_cast<float>(history.size() - 1);
-            const float nextX = left + graphWidth * static_cast<float>(i) /
-                static_cast<float>(history.size() - 1);
+            const float prevX = left + graphWidth * static_cast<float>(prev_idx - start_idx) /
+                static_cast<float>(range_size - 1);
+            const float nextX = left + graphWidth * static_cast<float>(i - start_idx) /
+                static_cast<float>(range_size - 1);
 
             const float prevY = bottom - graphHeight * (getValue(history[prev_idx]) - minValue) /
                 (maxValue - minValue);
@@ -115,6 +118,7 @@ void drawSeries(
 template<typename GetterA>
 void drawSeries(
     const std::vector<SimulationStats>& history,
+    size_t start_idx,
     Rectangle area,
     GetterA getValueA,
     Color colorA,
@@ -132,7 +136,7 @@ void drawSeries(
         LIGHTGRAY
     );
 
-    if (history.size() < 2) {
+    if (history.size() - start_idx < 2) {
         DrawText(
             "Not enough data",
             area.x + 10,
@@ -143,11 +147,13 @@ void drawSeries(
         return;
     }
 
-    float minValue = getValueA(history.front());
-    float maxValue = getValueA(history.front());
+    size_t range_size = history.size() - start_idx;
 
-    for (const auto& stats : history) {
-        float valA = getValueA(stats);
+    float minValue = getValueA(history[start_idx]);
+    float maxValue = getValueA(history[start_idx]);
+
+    for (size_t i = start_idx; i < history.size(); ++i) {
+        float valA = getValueA(history[i]);
         minValue = std::min(minValue, valA);
         maxValue = std::max(maxValue, valA);
     }
@@ -169,16 +175,16 @@ void drawSeries(
     DrawLine(left, top, left, bottom, GRAY);
 
     auto drawLineForValues = [&](auto getValue, Color color) {
-        size_t step = std::max<size_t>(1, history.size() / static_cast<size_t>(graphWidth));
-        size_t prev_idx = 0;
-        for (size_t i = step; i < history.size(); i += step) {
+        size_t step = std::max<size_t>(1, range_size / static_cast<size_t>(graphWidth));
+        size_t prev_idx = start_idx;
+        for (size_t i = start_idx + step; i < history.size(); i += step) {
             if (i + step >= history.size()) {
                 i = history.size() - 1; // ensure we draw the last point
             }
-            const float prevX = left + graphWidth * static_cast<float>(prev_idx) /
-                static_cast<float>(history.size() - 1);
-            const float nextX = left + graphWidth * static_cast<float>(i) /
-                static_cast<float>(history.size() - 1);
+            const float prevX = left + graphWidth * static_cast<float>(prev_idx - start_idx) /
+                static_cast<float>(range_size - 1);
+            const float nextX = left + graphWidth * static_cast<float>(i - start_idx) /
+                static_cast<float>(range_size - 1);
 
             const float prevY = bottom - graphHeight * (getValue(history[prev_idx]) - minValue) /
                 (maxValue - minValue);
@@ -369,8 +375,14 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
     const int chartHeight = (chartsHeight - 5 * simulation_config::graphs::section_gap) / 6;
     const int chartWidth = width - 2 * simulation_config::graphs::panel_padding;
 
+    size_t start_idx = 0;
+    if (history.size() > simulation_config::graphs::max_displayed_points) {
+        start_idx = history.size() - simulation_config::graphs::max_displayed_points;
+    }
+
     drawSeries(
         history,
+        start_idx,
         Rectangle{
             static_cast<float>(x + simulation_config::graphs::panel_padding),
             static_cast<float>(chartsTop),
@@ -386,6 +398,7 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
     );
     drawSeries(
         history,
+        start_idx,
         Rectangle{
             static_cast<float>(x + simulation_config::graphs::panel_padding),
             static_cast<float>(chartsTop + chartHeight + simulation_config::graphs::section_gap),
@@ -398,6 +411,7 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
     );
     drawSeries(
         history,
+        start_idx,
         Rectangle{
             static_cast<float>(x + simulation_config::graphs::panel_padding),
             static_cast<float>(
@@ -412,6 +426,7 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
     );
     drawSeries(
         history,
+        start_idx,
         Rectangle{
             static_cast<float>(x + simulation_config::graphs::panel_padding),
             static_cast<float>(
@@ -426,6 +441,7 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
     );
     drawSeries(
         history,
+        start_idx,
         Rectangle{
             static_cast<float>(x + simulation_config::graphs::panel_padding),
             static_cast<float>(
@@ -443,6 +459,7 @@ void StatsHistory::draw(int x, int y, int width, int height) const {
     );
     drawSeries(
         history,
+        start_idx,
         Rectangle{
             static_cast<float>(x + simulation_config::graphs::panel_padding),
             static_cast<float>(

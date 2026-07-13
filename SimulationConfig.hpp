@@ -1,4 +1,3 @@
-
 #pragma once
 
 namespace simulation_config {
@@ -13,9 +12,9 @@ namespace simulation_config {
     //
     // Настройки для этого режима:
     // 1. Исходные константы Monod полностью сохранены (K_F = 1500.0, U_max = 0.48/3600).
-    // 2. Крайне низкое начальное питание в объеме: initial_food = 5.0 (чтобы не было сытого роста).
-    // 3. Очень медленная диффузия глюкозы: food_diffusion_coeff = 0.002 (создает резкий градиент).
-    // 4. Постоянный приток свежего питания сверху (частое добавление).
+    // 2. Начальное питание в объеме: initial_food = 200.0 (чтобы клетки стартовали активными и не засыпали сразу).
+    // 3. Очень медленная диффузия глюкозы: food_diffusion_coeff = 0.005 (создает резкий локальный дефицит).
+    // 4. Постоянный приток свежего питания сверху (частое добавление: steps_for_adding_food = 100).
     // ============================================================
 
     namespace monod {
@@ -40,15 +39,15 @@ namespace simulation_config {
         inline constexpr int width  = 100;
         inline constexpr int height = 200;
 
-        // Почти пустое поле, чтобы колония не росла сплошным ковром
-        inline constexpr double initial_food         = 5.0; 
+        // Достаточная начальная концентрация для старта роста
+        inline constexpr double initial_food         = 200.0; 
 
         // Экстремально низкая диффузия для DLG-режима
-        inline constexpr double food_diffusion_coeff = 0.002; 
+        inline constexpr double food_diffusion_coeff = 0.005; 
 
         // Частое добавление еды только сверху
-        inline constexpr int    steps_for_adding_food  = 1;
-        inline constexpr double count_of_adding_food   = 35000.0; 
+        inline constexpr int    steps_for_adding_food  = 100;
+        inline constexpr double count_of_adding_food   = 40.0; 
     }
 
     namespace biomass {
@@ -60,11 +59,11 @@ namespace simulation_config {
         inline constexpr double max_biomass        = 1.0;
         inline constexpr double child_biomass_ratio      = 0.5;
         inline constexpr double reproduction_min_biomass = 0.7;
-        inline constexpr int    default_max_age    = 2880;
+        inline constexpr int    default_max_age    = 1000000;
         inline constexpr double default_resistance = 0.000015;
 
         inline constexpr double nonactive_resistance_multiplier = 2.0;
-        inline constexpr double nonactive_max_life_multiplier   = 1000.0;
+        inline constexpr double nonactive_max_life_multiplier   = 2.0;
         inline constexpr int    dead_steps_to_disappearance     = 100;
     }
 
@@ -102,7 +101,7 @@ namespace simulation_config {
         inline constexpr double min_brightness   = 0.35;
         inline constexpr double brightness_span  = 0.65;
 
-        inline constexpr double modified_nutrition_normalizer = 100; //field::initial_food;
+        inline constexpr double modified_nutrition_normalizer = field::initial_food;
 
         inline constexpr unsigned char empty_cell_blue_r = 0;
         inline constexpr unsigned char empty_cell_blue_g = 100;

@@ -61,7 +61,10 @@ const Antibiotic& Cell::get_antibiotic() const {
 Field::Field(int width, int height)
     : width(width),
     height(height),
-    field(height * width) {
+    field(height * width),
+    temp_grid(height * width, 0.0),
+    food_grid(height * width, 0.0),
+    antibiotic_grid(height * width, 0.0) {
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             field[y * width + x] = Cell(x, y);
@@ -89,14 +92,11 @@ void Field::add_antibiotic(double concentration) {
   }
 }
 
-static void diffuse_grid_adi(std::vector<double>& grid, int width, int height, double D, double dt, double decay_rate = 0.0) {
+static void diffuse_grid_adi(std::vector<double>& grid, std::vector<double>& temp, int width, int height, double D, double dt, double decay_rate = 0.0) {
     if (height == 0 || width == 0) return;
 
     double r = D * dt / 2.0;
     if (r <= 0.0) return;
-
-    // Промежуточная сетка для первого полушага
-    std::vector<double> temp(height * width, 0.0);
 
     // Предвычисление c_prime по ширине (X)
     std::vector<double> c_prime_x(width);
@@ -117,10 +117,10 @@ static void diffuse_grid_adi(std::vector<double>& grid, int width, int height, d
     // 1. ПЕРВЫЙ ПОЛУШАГ: Неявный по X, явный по Y
 #pragma omp parallel
     {
-        std::vector<double> d_prime(width);
+        double d_prime[512];
+        double d[512];
 #pragma omp for schedule(static)
         for (int j = 0; j < height; ++j) {
-            std::vector<double> d(width);
             for (int i = 0; i < width; ++i) {
                 double val_self = grid[j * width + i];
                 double val_up = (j > 0) ? grid[(j - 1) * width + i] : val_self;
@@ -147,10 +147,10 @@ static void diffuse_grid_adi(std::vector<double>& grid, int width, int height, d
     // 2. ВТОРОЙ ПОЛУШАГ: Явный по X, неявный по Y
 #pragma omp parallel
     {
-        std::vector<double> d_prime(height);
+        double d_prime[512];
+        double d[512];
 #pragma omp for schedule(static)
         for (int i = 0; i < width; ++i) {
-            std::vector<double> d(height);
             for (int j = 0; j < height; ++j) {
                 double val_self = temp[j * width + i];
                 double val_left = (i > 0) ? temp[j * width + i - 1] : val_self;
@@ -191,9 +191,6 @@ static void diffuse_grid_adi(std::vector<double>& grid, int width, int height, d
 }
 
 void Field::diffuse_all() {
-    std::vector<double> food_grid(height * width);
-    std::vector<double> antibiotic_grid(height * width);
-
 #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
@@ -203,11 +200,11 @@ void Field::diffuse_all() {
         }
     }
 
-    diffuse_grid_adi(food_grid, width, height,
+    diffuse_grid_adi(food_grid, temp_grid, width, height,
                      simulation_config::field::food_diffusion_coeff,
                      simulation_config::monod::delta_t);
 
-    diffuse_grid_adi(antibiotic_grid, width, height,
+    diffuse_grid_adi(antibiotic_grid, temp_grid, width, height,
                      simulation_config::antibiotic::diffusion_coeff,
                      simulation_config::monod::delta_t,
                      simulation_config::antibiotic::decay_rate);

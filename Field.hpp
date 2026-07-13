@@ -50,6 +50,9 @@ private:
     std::vector<Cell> field;
     std::vector<std::pair<int, int>> active_cells;
     std::vector<std::pair<int, int>> dead_cells;
+    std::vector<double> temp_grid;
+    std::vector<double> food_grid;
+    std::vector<double> antibiotic_grid;
 
     void process_dead_cells_disappearance();
 

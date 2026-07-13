@@ -47,7 +47,7 @@ class Field {
 private:
     int width;
     int height;
-    std::vector<std::vector<Cell>> field;
+    std::vector<Cell> field;
 
     void process_dead_cells_disappearance();
 
@@ -63,8 +63,7 @@ public:
     int get_width() const;
     int get_height() const;
 
-    void diffuse_food();
-    void diffuse_antibiotic();   // новый метод
+    void diffuse_all();
 
     void init_environment(
         double initial_food = simulation_config::field::default_initial_food
@@ -76,7 +75,7 @@ public:
         double concentration
     );
 
-    const std::vector<std::vector<Cell>>& get_field() const;
+    const std::vector<Cell>& get_field() const;
 
     const Cell& get_nucleus(int x, int y) const;
     Cell& get_nucleus(int x, int y);

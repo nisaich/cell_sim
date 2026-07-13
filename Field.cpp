@@ -61,11 +61,10 @@ const Antibiotic& Cell::get_antibiotic() const {
 Field::Field(int width, int height)
     : width(width),
     height(height),
-    field(height) {
+    field(height * width) {
     for (int y = 0; y < height; ++y) {
-        field[y].reserve(width);
         for (int x = 0; x < width; ++x) {
-            field[y].emplace_back(x, y);
+            field[y * width + x] = Cell(x, y);
         }
     }
 }
@@ -90,17 +89,14 @@ void Field::add_antibiotic(double concentration) {
   }
 }
 
-static void diffuse_grid_adi(std::vector<std::vector<double>>& grid, double D, double dt, double decay_rate = 0.0) {
-    int height = grid.size();
-    if (height == 0) return;
-    int width = grid[0].size();
-    if (width == 0) return;
+static void diffuse_grid_adi(std::vector<double>& grid, int width, int height, double D, double dt, double decay_rate = 0.0) {
+    if (height == 0 || width == 0) return;
 
     double r = D * dt / 2.0;
     if (r <= 0.0) return;
 
     // Промежуточная сетка для первого полушага
-    std::vector<std::vector<double>> temp(height, std::vector<double>(width, 0.0));
+    std::vector<double> temp(height * width, 0.0);
 
     // Предвычисление c_prime по ширине (X)
     std::vector<double> c_prime_x(width);
@@ -126,9 +122,9 @@ static void diffuse_grid_adi(std::vector<std::vector<double>>& grid, double D, d
         for (int j = 0; j < height; ++j) {
             std::vector<double> d(width);
             for (int i = 0; i < width; ++i) {
-                double val_self = grid[j][i];
-                double val_up = (j > 0) ? grid[j - 1][i] : val_self;
-                double val_down = (j < height - 1) ? grid[j + 1][i] : val_self;
+                double val_self = grid[j * width + i];
+                double val_up = (j > 0) ? grid[(j - 1) * width + i] : val_self;
+                double val_down = (j < height - 1) ? grid[(j + 1) * width + i] : val_self;
                 
                 d[i] = val_self + r * (val_up - 2.0 * val_self + val_down);
             }
@@ -141,9 +137,9 @@ static void diffuse_grid_adi(std::vector<std::vector<double>>& grid, double D, d
             double denom_last = (1.0 + r) + r * c_prime_x[width - 2];
             double d_prime_last = (d[width - 1] + r * d_prime[width - 2]) / denom_last;
 
-            temp[j][width - 1] = d_prime_last;
+            temp[j * width + width - 1] = d_prime_last;
             for (int i = width - 2; i >= 0; --i) {
-                temp[j][i] = d_prime[i] - c_prime_x[i] * temp[j][i + 1];
+                temp[j * width + i] = d_prime[i] - c_prime_x[i] * temp[j * width + i + 1];
             }
         }
     }
@@ -156,9 +152,9 @@ static void diffuse_grid_adi(std::vector<std::vector<double>>& grid, double D, d
         for (int i = 0; i < width; ++i) {
             std::vector<double> d(height);
             for (int j = 0; j < height; ++j) {
-                double val_self = temp[j][i];
-                double val_left = (i > 0) ? temp[j][i - 1] : val_self;
-                double val_right = (i < width - 1) ? temp[j][i + 1] : val_self;
+                double val_self = temp[j * width + i];
+                double val_left = (i > 0) ? temp[j * width + i - 1] : val_self;
+                double val_right = (i < width - 1) ? temp[j * width + i + 1] : val_self;
 
                 d[j] = val_self + r * (val_left - 2.0 * val_self + val_right);
             }
@@ -171,9 +167,9 @@ static void diffuse_grid_adi(std::vector<std::vector<double>>& grid, double D, d
             double denom_last = (1.0 + r) + r * c_prime_y[height - 2];
             double d_prime_last = (d[height - 1] + r * d_prime[height - 2]) / denom_last;
 
-            grid[height - 1][i] = d_prime_last;
+            grid[(height - 1) * width + i] = d_prime_last;
             for (int j = height - 2; j >= 0; --j) {
-                grid[j][i] = d_prime[j] - c_prime_y[j] * grid[j + 1][i];
+                grid[j * width + i] = d_prime[j] - c_prime_y[j] * grid[(j + 1) * width + i];
             }
         }
     }
@@ -181,62 +177,47 @@ static void diffuse_grid_adi(std::vector<std::vector<double>>& grid, double D, d
     // Применение коэффициента деградации и ограничение неотрицательности
     if (decay_rate > 0.0) {
         double decay_factor = 1.0 - decay_rate;
-#pragma omp parallel for collapse(2) schedule(static)
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                grid[y][x] *= decay_factor;
-                if (grid[y][x] < 0.0) grid[y][x] = 0.0;
-            }
+#pragma omp parallel for schedule(static)
+        for (int i = 0; i < height * width; ++i) {
+            grid[i] *= decay_factor;
+            if (grid[i] < 0.0) grid[i] = 0.0;
         }
     } else {
-#pragma omp parallel for collapse(2) schedule(static)
-        for (int y = 0; y < height; ++y) {
-            for (int x = 0; x < width; ++x) {
-                if (grid[y][x] < 0.0) grid[y][x] = 0.0;
-            }
+#pragma omp parallel for schedule(static)
+        for (int i = 0; i < height * width; ++i) {
+            if (grid[i] < 0.0) grid[i] = 0.0;
         }
     }
 }
 
-void Field::diffuse_food() {
-    std::vector<std::vector<double>> grid(height, std::vector<double>(width, 0.0));
+void Field::diffuse_all() {
+    std::vector<double> food_grid(height * width);
+    std::vector<double> antibiotic_grid(height * width);
+
 #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            grid[y][x] = get_nucleus(x, y).get_food().get_amount();
+            int idx = y * width + x;
+            food_grid[idx] = field[idx].get_food().get_amount();
+            antibiotic_grid[idx] = field[idx].get_antibiotic().get_concentration();
         }
     }
 
-    diffuse_grid_adi(grid, 
-                     simulation_config::field::food_diffusion_coeff, 
+    diffuse_grid_adi(food_grid, width, height,
+                     simulation_config::field::food_diffusion_coeff,
                      simulation_config::monod::delta_t);
 
-#pragma omp parallel for collapse(2) schedule(static)
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            get_nucleus(x, y).get_food().set_amount(grid[y][x]);
-        }
-    }
-}
-
-void Field::diffuse_antibiotic() {
-    std::vector<std::vector<double>> grid(height, std::vector<double>(width, 0.0));
-#pragma omp parallel for collapse(2) schedule(static)
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            grid[y][x] = get_nucleus(x, y).get_antibiotic().get_concentration();
-        }
-    }
-
-    diffuse_grid_adi(grid, 
-                     simulation_config::antibiotic::diffusion_coeff, 
+    diffuse_grid_adi(antibiotic_grid, width, height,
+                     simulation_config::antibiotic::diffusion_coeff,
                      simulation_config::monod::delta_t,
                      simulation_config::antibiotic::decay_rate);
 
 #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            get_nucleus(x, y).get_antibiotic().set_concentration(grid[y][x]);
+            int idx = y * width + x;
+            field[idx].get_food().set_amount(food_grid[idx]);
+            field[idx].get_antibiotic().set_concentration(antibiotic_grid[idx]);
         }
     }
 }
@@ -258,11 +239,11 @@ int Field::get_height() const {
 }
 
 Cell& Field::get_nucleus(int x, int y) {
-    return field[y][x];
+    return field[y * width + x];
 }
 
 const Cell& Field::get_nucleus(int x, int y) const {
-    return field[y][x];
+    return field[y * width + x];
 }
 
 std::vector<Cell*> Field::get_neighbours(int x, int y) {
@@ -316,13 +297,11 @@ bool Field::place_cell(int x, int y, std::shared_ptr<abstract_Biomass> cell) {
 }
 
 bool Field::has_living_cells() const {
-    for (const auto& row : field) {
-        for (const Cell& nucleus : row) {
-            std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
+    for (const Cell& nucleus : field) {
+        std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
-            if (cell != nullptr && cell->is_alive()) {
-                return true;
-            }
+        if (cell != nullptr && cell->is_alive()) {
+            return true;
         }
     }
 
@@ -356,14 +335,12 @@ void Field::process_dead_cells_disappearance() {
 void Field::make_one_step(int number_of_step) {
     // Диффузия
     if (number_of_step % simulation_config::visualization::number_of_step_to_diffuse == 0) {
-        diffuse_food();
-        diffuse_antibiotic();
+        diffuse_all();
     }
 
     // Добавление пищи (точечное)
     if (number_of_step % simulation_config::field::steps_for_adding_food == 0) {
         add_some_food(simulation_config::field::count_of_adding_food);
-    }
 
     // Добавление антибиотика
     double sum_antibiotic = 0.0;
@@ -379,6 +356,7 @@ void Field::make_one_step(int number_of_step) {
         add_antibiotic(concentration);
         concentration += concetration_for_next_step;
     }
+    }
 
     std::vector<std::pair<int, int>> cells_for_this_step;
 
@@ -388,7 +366,7 @@ void Field::make_one_step(int number_of_step) {
 #pragma omp for collapse(2) schedule(static)
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
-                std::shared_ptr<abstract_Biomass> cell = field[y][x].get_cell();
+                std::shared_ptr<abstract_Biomass> cell = field[y * width + x].get_cell();
 
                 if (cell != nullptr && cell->is_alive()) {
                     local_cells.emplace_back(x, y);
@@ -444,6 +422,6 @@ void Field::make_one_step(int number_of_step) {
     process_dead_cells_disappearance();
 }
 
-const std::vector<std::vector<Cell>>& Field::get_field() const {
+const std::vector<Cell>& Field::get_field() const {
     return field;
 }

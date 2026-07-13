@@ -32,22 +32,22 @@ namespace simulation_config {
         // Начальная концентрация глюкозы в среде.
         // Для активного роста в закрытой колбе/чашке Петри используем 3.0 г/л = 3 000 000 мкг/л.
         // При такой концентрации бактерии смогут делиться многократно.
-        inline constexpr double initial_food = 300.0;
+        inline constexpr double initial_food = 400.0;
         inline constexpr double default_initial_food = 0.0;
         inline constexpr double D = 1.0 / 600.0; //используется в food_diffusion_coeff
         inline constexpr double food_diffusion_coeff = 0.20;//field::D * monod::delta_t;   // Быстрая диффузия для адекватного перераспределения
-        inline constexpr int steps_for_adding_food = 10000;
-        inline constexpr double count_of_adding_food = 100.0;
+        inline constexpr int steps_for_adding_food = 100000;
+        inline constexpr double count_of_adding_food = 1000.0;
     }
 
 
 
     namespace biomass {
-        inline constexpr double dispersion_chance = 0.01;
-        inline constexpr int dispersion_radius = 5;
+        inline constexpr double dispersion_chance = 0.001;
+        inline constexpr int dispersion_radius = 10;
 
         inline constexpr int max_count_reps = 10000;
-        inline constexpr double initial_biomass = 0.5;
+        inline constexpr double initial_biomass = 0.5;  //распространяется только на первоначальный засев
         inline constexpr double max_biomass = 1.0;
         inline constexpr double child_biomass_ratio = 0.5;     // Деление строго пополам
         inline constexpr double reproduction_min_biomass = 0.7; // Минимальная биомасса для деления

@@ -314,7 +314,7 @@ public:
     void draw(
         int width,
         int height,
-        const std::vector<std::vector<Cell>>& field,
+        const std::vector<Cell>& field,
         float startX,
         float startY,
         float cellSize,
@@ -326,7 +326,7 @@ public:
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                const Cell& nucleus = field[y][x];
+                const Cell& nucleus = field[y * width + x];
 
                 float drawX = startX + x * cellSize;
                 float drawY = startY + y * cellSize;

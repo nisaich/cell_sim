@@ -27,17 +27,17 @@ namespace simulation_config {
         // 1 ячейка = 1 мкм. 1000x1000 ячеек = 1 мм x 1 мм.
         // Это физически достоверно для Pseudomonas aeruginosa (размер клетки ~1-2 мкм)
         inline constexpr int width = 100;
-        inline constexpr int height = 100;
+        inline constexpr int height = 500;
 
         // Начальная концентрация глюкозы в среде.
         // Для активного роста в закрытой колбе/чашке Петри используем 3.0 г/л = 3 000 000 мкг/л.
         // При такой концентрации бактерии смогут делиться многократно.
-        inline constexpr double initial_food = 400.0;
-        inline constexpr double default_initial_food = 0.0;
+        inline constexpr double initial_food = 300.0;
+        inline constexpr double default_initial_food = 0.00;
         inline constexpr double D = 1.0 / 600.0; //используется в food_diffusion_coeff
-        inline constexpr double food_diffusion_coeff = 0.20;//field::D * monod::delta_t;   // Быстрая диффузия для адекватного перераспределения
-        inline constexpr int steps_for_adding_food = 100000;
-        inline constexpr double count_of_adding_food = 1000.0;
+        inline constexpr double food_diffusion_coeff = 0.008;//field::D * monod::delta_t;   // Быстрая диффузия для адекватного перераспределения
+        inline constexpr int steps_for_adding_food = 1000;
+        inline constexpr double count_of_adding_food = 20.0;
     }
 
 
@@ -71,9 +71,9 @@ namespace simulation_config {
         inline constexpr double decay_rate = 0.001;             // Деградация антибиотика за шаг
 
         // Добавление антибиотика
-        inline constexpr double concetration_for_next_step = 0.01;  //сколько мы добавим на следующем ходу
-        inline constexpr double visualization_normalizer =  0.02; // Нормировка для отображения концентрации
+        inline constexpr double concetration_for_next_step = 0.0;  //сколько мы добавим на следующем ходу
         inline constexpr double middle_value_of_antibiotic = 0.00003;  //среднее значение антибиотика после которого произойдёт добавление нового антибиотика
+        inline constexpr double visualization_normalizer =  antibiotic::middle_value_of_antibiotic * 2; // Нормировка для отображения концентрации
 
         // Параметры физиологической (адаптивной) резистентности
         // (механизмы эффлюксных насосов MexAB-OprM и регуляции поринов OprD у Pseudomonas)
@@ -93,12 +93,12 @@ namespace simulation_config {
         inline constexpr int graph_panel_width = 400;
         inline constexpr int modified_content_gap = 20;
         inline constexpr int modified_window_screen_margin = 100;
-        inline constexpr int number_of_step_to_diffuse = 1;    // Диффузия каждый шаг
+        inline constexpr int number_of_step_to_diffuse = 5;    // Диффузия каждый шаг
 
         inline constexpr double min_brightness = 0.35;
         inline constexpr double brightness_span = 0.65;
 
-        inline constexpr double modified_nutrition_normalizer = 500; //field::initial_food;
+        inline constexpr double modified_nutrition_normalizer = field::initial_food;
 
         inline constexpr unsigned char empty_cell_blue_r = 0;
         inline constexpr unsigned char empty_cell_blue_g = 100;

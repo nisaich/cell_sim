@@ -42,13 +42,13 @@ namespace simulation_config {
         inline constexpr int width  = 100;
         inline constexpr int height = 200;
 
-        // Хорошее питание: между пульсами купол активно растёт
-        inline constexpr double initial_food         = 280.0;
+        // КРИТИЧНО: initial_food >> 428.6 (F_breakeven при Monod-параметрах Pseudomonas)
+        inline constexpr double initial_food         = 2000.0;
         inline constexpr double food_diffusion_coeff = 0.20;
 
         // Частое добавление еды — купол успевает восстанавливаться между волнами
         inline constexpr int    steps_for_adding_food  = 200;
-        inline constexpr double count_of_adding_food   = 180.0;
+        inline constexpr double count_of_adding_food   = 5000.0;
     }
 
     namespace biomass {

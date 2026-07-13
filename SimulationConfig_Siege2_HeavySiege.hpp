@@ -41,11 +41,12 @@ namespace simulation_config {
         inline constexpr int width  = 100;
         inline constexpr int height = 200;
 
-        inline constexpr double initial_food         = 280.0;
+        // КРИТИЧНО: initial_food >> 428.6 (F_breakeven при Monod-параметрах Pseudomonas)
+        inline constexpr double initial_food         = 2000.0;
         inline constexpr double food_diffusion_coeff = 0.20;
 
         inline constexpr int    steps_for_adding_food  = 500;
-        inline constexpr double count_of_adding_food   = 120.0;
+        inline constexpr double count_of_adding_food   = 5000.0;
     }
 
     namespace biomass {

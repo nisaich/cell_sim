@@ -236,7 +236,7 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     }
     // ----------------------------------
 
-    place_for_child->set_cell(child);
+    current_field.place_cell(place_for_child->coordinates()[0], place_for_child->coordinates()[1], child);
     return true;
 }
 

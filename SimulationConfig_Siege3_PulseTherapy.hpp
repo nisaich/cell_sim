@@ -3,18 +3,23 @@
 namespace simulation_config {
 
     // ============================================================
-    // СЦЕНАРИЙ: Осада биоплёнки (Biofilm Under Siege)
+    // СЦЕНАРИЙ: Импульсная терапия (Pulse Antibiotic Therapy)
     // ============================================================
-    // Умеренное давление антибиотика: ~2×MIC на границе.
-    // Внешний слой купола погибает, внутренние клетки успевают
-    // накопить резистентность через TtgABC помпы и выживают.
-    // Это НАИБОЛЕЕ реалистичный сценарий.
+    // Самый интересный для наблюдения: антибиотик подаётся крупными
+    // редкими импульсами (высокий concetration_for_next_step, высокий steps_for_adding).
+    // Между волнами колония успевает частично восстановиться.
     //
-    // Физика:
-    //   - antibiotic diffusion_coeff = 0.008 → медленное проникновение
-    //   - death: conc - resistance > 2.0
-    //   - outer cells: conc~4.0, resistance~0.0 → умирают мгновенно
-    //   - inner cells: conc~0.5, resistance→1.0 (k_ind=0.3) → выживают
+    // Между пульсами:
+    //   - выжившие клетки из ядра делятся, поднимая resistance потомства
+    //   - купол начинает отрастать заново
+    //   - концентрация антибиотика спадает (decay)
+    //
+    // При следующей волне:
+    //   - внешние клетки нового роста гибнут
+    //   - устойчивое ядро снова выживает
+    //   - с каждой волной ядро немного вырастает → ЭВОЛЮЦИЯ УСТОЙЧИВОСТИ
+    //
+    // Видно: ритмичное "мигание" колонии + постепенное нарастание зелёного ядра
     // ============================================================
 
     namespace monod {
@@ -28,7 +33,7 @@ namespace simulation_config {
         inline constexpr double Y_B_F = 0.45;
 
         inline constexpr double starvation_biomass_threshold = 0.2;
-        inline constexpr double starvation_steps_threshold   = 3.0; // засыпаем если еды меньше чем на 3 шага
+        inline constexpr double starvation_steps_threshold   = 3.0;
         inline constexpr double greed_coefficient = 1.3;
         inline constexpr int    steps_for_waking_up = 60;
     }
@@ -37,12 +42,13 @@ namespace simulation_config {
         inline constexpr int width  = 100;
         inline constexpr int height = 200;
 
-        // Хорошее питание: клетки растут до насыщения (ок. ~0.7 биомассы), купол образуется
+        // Хорошее питание: между пульсами купол активно растёт
         inline constexpr double initial_food         = 280.0;
-        inline constexpr double food_diffusion_coeff = 0.20; // нормальная диффузия еды
+        inline constexpr double food_diffusion_coeff = 0.20;
 
-        inline constexpr int    steps_for_adding_food  = 500;
-        inline constexpr double count_of_adding_food   = 150.0; // поддерживаем питание
+        // Частое добавление еды — купол успевает восстанавливаться между волнами
+        inline constexpr int    steps_for_adding_food  = 200;
+        inline constexpr double count_of_adding_food   = 180.0;
     }
 
     namespace biomass {
@@ -54,40 +60,40 @@ namespace simulation_config {
         inline constexpr double max_biomass        = 1.0;
         inline constexpr double child_biomass_ratio      = 0.5;
         inline constexpr double reproduction_min_biomass = 0.7;
-        inline constexpr int    default_max_age    = 2880; // 2 суток
+        inline constexpr int    default_max_age    = 2880;
         inline constexpr double default_resistance = 0.000015;
 
-        inline constexpr double nonactive_resistance_multiplier = 2.0;
-        inline constexpr double nonactive_max_life_multiplier   = 2.0;
-        inline constexpr int    dead_steps_to_disappearance     = 100;
+        inline constexpr double nonactive_resistance_multiplier = 2.5;
+        inline constexpr double nonactive_max_life_multiplier   = 2.5;
+        inline constexpr int    dead_steps_to_disappearance     = 60; // быстрее очищается — лучше видно рост
     }
 
     namespace antibiotic {
-        // MIC = 2.0 мкг/мл: клетка гибнет если (conc - resistance) > 2.0
         inline constexpr double death_threshold = 2.0;
-        // Засыпаем при 80% от MIC — у внутренних клеток шанс на индукцию помп
-        inline constexpr double sleep_antibiotic_ratio = 0.80;
+        inline constexpr double sleep_antibiotic_ratio = 0.70;
 
-        inline constexpr double reproduction_penalty   = 0.5;
+        inline constexpr double reproduction_penalty   = 0.35;
         inline constexpr double stress_transition_chance = 0.05;
 
-        // МЕДЛЕННАЯ диффузия антибиотика — EPS матрикс биоплёнки замедляет проникновение
-        inline constexpr double diffusion_coeff = 0.008;
-        inline constexpr double decay_rate = 0.0002; // медленный распад
+        // Умеренная диффузия: волна проходит быстрее, но и падает быстрее
+        inline constexpr double diffusion_coeff = 0.012;
+        // БЫСТРЫЙ распад: между пульсами антибиотик рассасывается за ~500 шагов
+        inline constexpr double decay_rate = 0.004;
 
-        // Умеренное давление: ~2×MIC на верхней границе
-        // Внешние клетки (conc~4): 4 - 0 > 2 → гибель
-        // Внутренние клетки (conc~0.5): 0.5 - resistance(→1.0) < 2 → выживание
-        inline constexpr double concetration_for_next_step     = 2.0; // доза за добавление
-        inline constexpr double middle_value_of_antibiotic     = 4.0; // поддерживаем ~4 мкг/мл в верхней строке
+        // ИМПУЛЬСНАЯ ДОЗИРОВКА:
+        // Добавляем каждые 300 шагов большую дозу (5.0 единиц)
+        // Затем она диффундирует и распадается: к следующему пульсу остаток ~0.1
+        // За 300 шагов (5 часов) выжившие клетки успевают поделиться 2-3 раза
+        inline constexpr double concetration_for_next_step     = 5.0; // крупный импульс
+        inline constexpr double middle_value_of_antibiotic     = 4.0; // пополняем только если упало ниже 4
         inline constexpr double visualization_normalizer       = 6.0;
 
-        // Быстрая индукция TtgABC: внутренние клетки при conc~0.5 успевают поднять resistance
-        // За ~5 тиков (5 минут) resistance доходит до 0.5, за ~20 тиков — до 0.9
-        inline constexpr double k_ind = 0.30;
-        inline constexpr double K_ind = 0.80; // полуиндукция уже при 0.8 мкг/мл
-        inline constexpr double k_rec = 0.002; // медленная релаксация — клетки сохраняют устойчивость
-        inline constexpr double fitness_cost_coef = 0.05; // минимальный штраф — устойчивые клетки размножаются почти нормально
+        // Умеренная индукция: резистентность строится постепенно за несколько волн
+        inline constexpr double k_ind = 0.20;
+        inline constexpr double K_ind = 0.80;
+        // ВАЖНО: медленная релаксация — клетки "помнят" предыдущие волны
+        inline constexpr double k_rec = 0.0005;
+        inline constexpr double fitness_cost_coef = 0.04;
     }
 
     namespace visualization {

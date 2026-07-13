@@ -15,8 +15,8 @@ int main() {
 
     // ---- ТРИ УЧАСТКА ПО 5 КЛЕТОК НА НИЖНЕЙ ГРАНИЦЕ ----
     const int y = height - 1;  // нижняя строка
-    const int cells_per_group = 5;
-    const int groups = 3;
+    const int cells_per_group = 2;
+    const int groups = 1;
     const int total_width = cells_per_group * groups; // 15
     const int spacing = (width - total_width) / (groups + 1); // отступ между группами
 

@@ -209,6 +209,7 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
 
     double child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
     biomass = biomass - child_biomass;
+    age_of_cell = 0; // Сброс возраста родителя при делении (симметричное бинарное деление)
 
     auto child = std::make_shared<active_Biomass>(level_of_resistance, max_age_of_cell);
     child->biomass = child_biomass;

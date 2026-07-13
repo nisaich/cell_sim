@@ -48,6 +48,8 @@ private:
     int width;
     int height;
     std::vector<Cell> field;
+    std::vector<std::pair<int, int>> active_cells;
+    std::vector<std::pair<int, int>> dead_cells;
 
     void process_dead_cells_disappearance();
 

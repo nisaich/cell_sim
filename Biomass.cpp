@@ -52,7 +52,9 @@ bool abstract_Biomass::must_he_die(Field& current_field, int x, int y) const {
 }
 
 void abstract_Biomass::increase_age() {
-    ++age_of_cell;
+    if (is_active_for_monod() > 0.0) {
+        ++age_of_cell;
+    }
 }
 
 void abstract_Biomass::set_nucleus(Cell* current_nucleus) {

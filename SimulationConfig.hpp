@@ -1,11 +1,21 @@
+
 #pragma once
 
 namespace simulation_config {
 
     // ============================================================
-    // СЦЕНАРИЙ: Стандартные биологические параметры Pseudomonas putida KT2440
+    // СЦЕНАРИЙ: Древовидная (ветвистая) структура биоплёнки (Dendritic Pattern)
     // ============================================================
-    // Исходные константы Monod полностью сохранены (K_F = 1500.0, U_max = 0.48/3600).
+    // Причина ветвления в физике роста микроколоний — Diffusion-Limited Growth (DLG).
+    // Если питательных веществ мало (голодный режим) и диффузия медленная,
+    // клетки на поверхности съедают всю пищу до того, как она проникнет вглубь.
+    // В итоге растут только выдающиеся наружу "пальцы" или ветви, стремящиеся к пище.
+    //
+    // Настройки для этого режима:
+    // 1. Исходные константы Monod полностью сохранены (K_F = 1500.0, U_max = 0.48/3600).
+    // 2. Крайне низкое начальное питание в объеме: initial_food = 5.0 (чтобы не было сытого роста).
+    // 3. Очень медленная диффузия глюкозы: food_diffusion_coeff = 0.002 (создает резкий градиент).
+    // 4. Постоянный приток свежего питания сверху (частое добавление).
     // ============================================================
 
     namespace monod {
@@ -30,47 +40,51 @@ namespace simulation_config {
         inline constexpr int width  = 100;
         inline constexpr int height = 200;
 
-        inline constexpr double initial_food         = 280.0;
-        inline constexpr double food_diffusion_coeff = 0.20;
+        // Почти пустое поле, чтобы колония не росла сплошным ковром
+        inline constexpr double initial_food         = 5.0; 
 
-        inline constexpr int    steps_for_adding_food  = 1000;
-        inline constexpr double count_of_adding_food   = 20.0;
+        // Экстремально низкая диффузия для DLG-режима
+        inline constexpr double food_diffusion_coeff = 0.002; 
+
+        // Частое добавление еды только сверху
+        inline constexpr int    steps_for_adding_food  = 1;
+        inline constexpr double count_of_adding_food   = 35000.0; 
     }
 
     namespace biomass {
-        inline constexpr double dispersion_chance  = 0.001;
-        inline constexpr int    dispersion_radius  = 10;
+        inline constexpr double dispersion_chance  = 0.0001; // низкий разлёт, чтобы ветки не склеивались
+        inline constexpr int    dispersion_radius  = 5;
 
         inline constexpr int    max_count_reps     = 10000;
         inline constexpr double initial_biomass    = 0.5;
         inline constexpr double max_biomass        = 1.0;
         inline constexpr double child_biomass_ratio      = 0.5;
         inline constexpr double reproduction_min_biomass = 0.7;
-        inline constexpr int    default_max_age    = 1000000;
+        inline constexpr int    default_max_age    = 2880;
         inline constexpr double default_resistance = 0.000015;
 
         inline constexpr double nonactive_resistance_multiplier = 2.0;
-        inline constexpr double nonactive_max_life_multiplier   = 2.0;
+        inline constexpr double nonactive_max_life_multiplier   = 1000.0;
         inline constexpr int    dead_steps_to_disappearance     = 100;
     }
 
     namespace antibiotic {
-        inline constexpr double death_threshold = 2.0;
+        inline constexpr double death_threshold = 0.5;
 
         inline constexpr double reproduction_penalty   = 0.5;
         inline constexpr double stress_transition_chance = 0.05;
 
         inline constexpr double diffusion_coeff = 0.01;
-        inline constexpr double decay_rate = 0.0001;
+        inline constexpr double decay_rate = 0.001;
 
-        inline constexpr double concetration_for_next_step     = 0.05;
-        inline constexpr double middle_value_of_antibiotic     = 0.05;
-        inline constexpr double visualization_normalizer       = 0.10;
+        inline constexpr double concetration_for_next_step     = 0.0;
+        inline constexpr double middle_value_of_antibiotic     = 0.0;
+        inline constexpr double visualization_normalizer       = 1.0;
 
-        inline constexpr double k_ind = 0.10;
-        inline constexpr double K_ind = 1.0;
-        inline constexpr double k_rec = 0.01;
-        inline constexpr double fitness_cost_coef = 0.20;
+        inline constexpr double k_ind = 0.005;
+        inline constexpr double K_ind = 0.5;
+        inline constexpr double k_rec = 0.001;
+        inline constexpr double fitness_cost_coef = 0.35;
     }
 
     namespace visualization {
@@ -88,7 +102,7 @@ namespace simulation_config {
         inline constexpr double min_brightness   = 0.35;
         inline constexpr double brightness_span  = 0.65;
 
-        inline constexpr double modified_nutrition_normalizer = field::initial_food;
+        inline constexpr double modified_nutrition_normalizer = 100; //field::initial_food;
 
         inline constexpr unsigned char empty_cell_blue_r = 0;
         inline constexpr unsigned char empty_cell_blue_g = 100;

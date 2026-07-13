@@ -22,6 +22,7 @@ namespace simulation_config {
         inline constexpr double Y_B_F = 0.45;                  // Коэффициент выхода биомассы (Yield)
 
         inline constexpr double starvation_biomass_threshold = 0.2; // Порог биомассы для засыпания
+        inline constexpr double starvation_steps_threshold   = 100000.0; // Засыпаем, если еды хватит менее чем на 100 000 шагов
         inline constexpr double greed_coefficient = 1.3;       // Насколько потенциальный доход должен превышать расходы для пробуждения
         inline constexpr int steps_for_waking_up = 60;
     }
@@ -56,6 +57,7 @@ namespace simulation_config {
 
     namespace antibiotic {
         inline constexpr double death_threshold = 2.0;
+        inline constexpr double sleep_antibiotic_ratio = 0.8; // Засыпаем при 80% от порога смерти (MIC)
 
         inline constexpr double reproduction_penalty   = 0.5;
         inline constexpr double stress_transition_chance = 0.05;

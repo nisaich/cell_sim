@@ -113,9 +113,23 @@ void active_Biomass::consume_and_decay(Food& food) {
     abstract_Biomass::consume_and_decay(food);
     steps_active++;
 
-    // Переход в дормантное состояние при длительном голодании
-    if (nucleus != nullptr && biomass < simulation_config::monod::starvation_biomass_threshold) {
-        int ticks_needed = static_cast<int>(simulation_config::monod::steps_for_waking_up / simulation_config::monod::delta_t);
+    if (nucleus == nullptr) return;
+
+    double dt = simulation_config::monod::delta_t;
+    double conc = nucleus->get_antibiotic().get_concentration();
+
+    // 1. Проверка по количеству оставшейся еды (на сколько шагов обслуживания её хватит)
+    double maintenance_food_per_step = (simulation_config::monod::m_act * dt * biomass) / simulation_config::monod::Y_B_F;
+    double steps_food_will_last = (maintenance_food_per_step > 0.0) ? (food.get_amount() / maintenance_food_per_step) : 999999.0;
+    bool should_sleep_due_to_food = (steps_food_will_last < simulation_config::monod::starvation_steps_threshold);
+
+    // 2. Проверка по уровню антибиотика (близкое к порогу смерти содержание)
+    // Порог засыпания: когда концентрация превышает заданную долю от death_threshold
+    bool should_sleep_due_to_antibiotic = (conc >= simulation_config::antibiotic::sleep_antibiotic_ratio * simulation_config::antibiotic::death_threshold);
+
+    // Если выполняется хотя бы одно из условий, переходим в спящее состояние
+    if (should_sleep_due_to_food || should_sleep_due_to_antibiotic) {
+        int ticks_needed = static_cast<int>(simulation_config::monod::steps_for_waking_up / dt);
         if (ticks_needed < 1) ticks_needed = 1;
         if (steps_active >= ticks_needed) {
             auto nonactive = std::make_shared<nonactive_Biomass>();
@@ -126,13 +140,9 @@ void active_Biomass::consume_and_decay(Food& food) {
         }
     }
 
-    if (nucleus == nullptr) return;
-
     // Физиологическая адаптация резистентности (без деления, без случайности)
     // Индукция (по закону Моно): есть антибиотик → поднимаем щиты
     // Релаксация: нет антибиотика → возвращаемся к "дикому" уровню
-    double conc = nucleus->get_antibiotic().get_concentration();
-    double dt = simulation_config::monod::delta_t;
     double r_default = simulation_config::biomass::default_resistance;
 
     if (conc > 0.0) {
@@ -148,23 +158,6 @@ void active_Biomass::consume_and_decay(Food& food) {
                         * (level_of_resistance - r_default)
                         * dt;
         level_of_resistance = std::max(r_default, level_of_resistance - delta_r);
-    }
-
-    // Переход в спящее состояние из-за стресса от антибиотика
-    double excess = conc - level_of_resistance;
-    if (excess > 0.0) {
-        static std::mt19937 gen(std::random_device{}());
-        std::uniform_real_distribution<double> dist(0.0, 1.0);
-        double base_chance = std::min(excess * 0.01, static_cast<double>(simulation_config::antibiotic::stress_transition_chance));
-        // Адаптация вероятности к размеру шага dt
-        double adjusted_chance = 1.0 - std::pow(1.0 - base_chance, dt);
-        if (dist(gen) < adjusted_chance) {
-            auto nonactive = std::make_shared<nonactive_Biomass>();
-            copy_common_state_to(*nonactive);
-            nonactive->apply_dormancy_effects();
-            nucleus->set_cell(nonactive);
-            return;
-        }
     }
 }
 

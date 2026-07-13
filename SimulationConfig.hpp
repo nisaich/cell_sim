@@ -10,17 +10,30 @@ namespace simulation_config {
     // клетки на поверхности съедают всю пищу до того, как она проникнет вглубь.
     // В итоге растут только выдающиеся наружу "пальцы" или ветви, стремящиеся к пище.
     //
+    // ВАЖНО: направленность роста здесь дополнительно усилена тем, что
+    // active_Biomass::reproduction() в Biomass.cpp выбирает для потомка
+    // СВОБОДНОГО СОСЕДА С МАКСИМУМОМ ЕДЫ (хемотаксис) — это прямой аналог
+    // моделей ветвящегося роста Ben-Jacob/Ohgiwari для Bacillus subtilis.
+    //
+    // ПРЕДУПРЕЖДЕНИЕ О ГЕОМЕТРИИ ИСТОЧНИКА:
+    // Field::add_some_food() льёт еду ТОЛЬКО в одну точку (центр верхней строки).
+    // Это значит, что все ветви со временем стягиваются к одной точке —
+    // получится скорее сходящийся "корень/молния", а не расходящаяся крона.
+    // Если нужна именно расходящаяся крона — источник еды нужно менять в Field.cpp
+    // (лить по всей верхней строке или из нескольких точек), конфигом это не лечится.
+    //
     // Настройки для этого режима:
     // 1. Исходные константы Monod полностью сохранены (K_F = 1500.0, U_max = 0.48/3600).
     // 2. Лимит жизни клетки равен ровно 2 суткам: default_max_age = 2880 тиков.
     // 3. Биомасса клеток масштабирована вниз (порог деления 0.18, старт 0.15, спячка 0.08).
-    //    Это позволяет клеткам делиться при низком уровне еды (около 80-100 мг/л), преодолевая 
+    //    Это позволяет клеткам делиться при низком уровне еды (около 80-100 мг/л), преодолевая
     //    ограничение равновесия Monod.
-    // 4. Начальная еда выставлена в 100.0, диффузия медленная (0.012), частый приток сверху (+600.0).
+    // 4. Начальная еда — 100.0, диффузия медленная (0.008) и применяется реже (раз в 8 тиков),
+    //    чтобы локальные градиенты еды вокруг растущих кончиков не размывались слишком быстро.
     // ============================================================
 
     namespace monod {
-        // Один тик симуляции равен ровно 1.0 секунде!
+        // Один тик симуляции равен ровно 60.0 секундам (дискретный dt в формулах Monod).
         inline constexpr double delta_t = 60.0;
 
         // --- ПАРАМЕТРЫ РОСТА ДЛЯ PSEUDOMONAS AERUGINOSA (комнатная температура ~22°C) ---
@@ -32,9 +45,11 @@ namespace simulation_config {
         inline constexpr double K_F = 1500.0;                  // Полунасыщение глюкозы для Pseudomonas (мкг/л)
         inline constexpr double Y_B_F = 0.45;                  // Коэффициент выхода биомассы (Yield)
 
-        inline constexpr double starvation_biomass_threshold = 0.08; // Снижен порог для мелкомасштабных клеток
+        inline constexpr double starvation_biomass_threshold = 0.08; // Порог биомассы для засыпания (снижен под мелкие клетки)
+        inline constexpr double starvation_steps_threshold   = 100000.0; // Засыпаем, если еды хватит менее чем на 100 000 шагов
         inline constexpr double greed_coefficient = 1.3;       // Насколько потенциальный доход должен превышать расходы для пробуждения
-        inline constexpr int steps_for_waking_up = 60;
+        inline constexpr int steps_for_waking_up = 60;         // Время реактивации/засыпания в тиках (при delta_t=60 это ровно 1 тик —
+                                                                // клетка реагирует на голод/сытость почти мгновенно)
     }
 
     namespace field {
@@ -42,47 +57,51 @@ namespace simulation_config {
         inline constexpr int height = 200;
 
         // Начальная концентрация для старта
-        inline constexpr double initial_food         = 100.0; 
+        inline constexpr double initial_food = 800.0;
 
-        // Медленная диффузия глюкозы для образования градиента
-        inline constexpr double food_diffusion_coeff = 0.012; 
+        // Медленная диффузия глюкозы для образования градиента.
+        // Понижено с 0.012 до 0.008 для более резких локальных градиентов вокруг кончиков роста.
+        inline constexpr double food_diffusion_coeff = 0.05;
 
-        // Добавление еды только сверху
-        inline constexpr int    steps_for_adding_food  = 80;
-        inline constexpr double count_of_adding_food   = 600.0; 
+        // Добавление еды только сверху (см. предупреждение выше про геометрию источника)
+        inline constexpr int    steps_for_adding_food = 30;
+        inline constexpr double count_of_adding_food  = 4000.0;
     }
 
     namespace biomass {
-        inline constexpr double dispersion_chance  = 0.0001; // низкий разлёт, чтобы ветки не склеивались
-        inline constexpr int    dispersion_radius  = 5;
+        inline constexpr double dispersion_chance = 0.00001; 
+        inline constexpr int    dispersion_radius = 5;
 
-        inline constexpr int    max_count_reps     = 10000;
-        inline constexpr double initial_biomass    = 0.15; // масштабировано под низкий порог деления
-        inline constexpr double max_biomass        = 0.5;
-        inline constexpr double child_biomass_ratio      = 0.5;
-        inline constexpr double reproduction_min_biomass = 0.18; // низкий порог деления, чтобы делились при низком питании
-        
-        // Клетка живет ровно 2 суток (2880 минут)
-        inline constexpr int    default_max_age    = 2880; 
+        inline constexpr int    max_count_reps = 10000;
+        inline constexpr double initial_biomass = 0.2; // масштабировано под низкий порог деления
+        inline constexpr double max_biomass = 0.5;
+        inline constexpr double child_biomass_ratio = 0.5;
+        inline constexpr double reproduction_min_biomass = 0.3; // низкий порог деления, чтобы делились при низком питании
+
+        // Клетка живёт ровно 2 суток (2880 тиков при delta_t=60)
+        inline constexpr int    default_max_age = 4320;  //3 суток
         inline constexpr double default_resistance = 0.000015;
 
-        inline constexpr double nonactive_resistance_multiplier = 2.0;
-        inline constexpr double nonactive_max_life_multiplier   = 2.0;
-        inline constexpr int    dead_steps_to_disappearance     = 100;
+        inline constexpr double nonactive_resistance_multiplier = 100.0;
+        inline constexpr double nonactive_max_life_multiplier   = 100.0;
+
+        inline constexpr int    dead_steps_to_disappearance     = 1000;
     }
 
     namespace antibiotic {
         inline constexpr double death_threshold = 0.5;
+        inline constexpr double sleep_antibiotic_ratio = 0.8; // Засыпаем при 80% от порога смерти (MIC)
 
-        inline constexpr double reproduction_penalty   = 0.5;
+        inline constexpr double reproduction_penalty = 0.5;
         inline constexpr double stress_transition_chance = 0.05;
 
         inline constexpr double diffusion_coeff = 0.01;
         inline constexpr double decay_rate = 0.001;
 
-        inline constexpr double concetration_for_next_step     = 0.0;
-        inline constexpr double middle_value_of_antibiotic     = 0.0;
-        inline constexpr double visualization_normalizer       = 1.0;
+        // Антибиотик в этом сценарии отключён (сценарий про ветвление, не про резистентность)
+        inline constexpr double concetration_for_next_step = 0.02;
+        inline constexpr double middle_value_of_antibiotic = 0.3;
+        inline constexpr double visualization_normalizer   = antibiotic::concetration_for_next_step; //1.0;
 
         inline constexpr double k_ind = 0.005;
         inline constexpr double K_ind = 0.5;
@@ -97,13 +116,16 @@ namespace simulation_config {
         inline constexpr int target_fps      = 0;
         inline constexpr int steps_per_frame = 500;
 
-        inline constexpr int    graph_panel_width            = 400;
-        inline constexpr int    modified_content_gap         = 20;
-        inline constexpr int    modified_window_screen_margin = 100;
-        inline constexpr int    number_of_step_to_diffuse    = 5;
+        inline constexpr int    graph_panel_width             = 400;
+        inline constexpr int    modified_content_gap           = 20;
+        inline constexpr int    modified_window_screen_margin  = 100;
 
-        inline constexpr double min_brightness   = 0.35;
-        inline constexpr double brightness_span  = 0.65;
+        // Диффузия раз в 8 тиков вместо 5 — даёт локальным градиентам еды
+        // дольше держаться между сглаживаниями, усиливая эффект DLG.
+        inline constexpr int    number_of_step_to_diffuse = 8;
+
+        inline constexpr double min_brightness  = 0.35;
+        inline constexpr double brightness_span = 0.65;
 
         inline constexpr double modified_nutrition_normalizer = field::initial_food;
 
@@ -136,18 +158,18 @@ namespace simulation_config {
     }
 
     namespace graphs {
-        inline constexpr double chart_roundness        = 0.05;
-        inline constexpr int    chart_round_segments   = 4;
+        inline constexpr double chart_roundness         = 0.05;
+        inline constexpr int    chart_round_segments    = 4;
         inline constexpr double chart_outline_thickness = 1.0;
-        inline constexpr double chart_line_thickness   = 1.5;
-        inline constexpr double chart_span_epsilon     = 1e-6;
-        inline constexpr double chart_min_span         = 1.0;
-        inline constexpr int    text_font_size         = 12;
-        inline constexpr int    title_font_size        = 14;
-        inline constexpr int    max_displayed_points   = 300;
+        inline constexpr double chart_line_thickness    = 1.5;
+        inline constexpr double chart_span_epsilon      = 1e-6;
+        inline constexpr double chart_min_span          = 1.0;
+        inline constexpr int    text_font_size          = 12;
+        inline constexpr int    title_font_size         = 14;
+        inline constexpr int    max_displayed_points    = 300;
 
-        inline constexpr int panel_padding  = 12;
-        inline constexpr int header_bottom  = 160;
-        inline constexpr int section_gap    = 8;
+        inline constexpr int panel_padding = 12;
+        inline constexpr int header_bottom = 160;
+        inline constexpr int section_gap   = 8;
     }
 }

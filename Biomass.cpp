@@ -191,9 +191,21 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
         if (chance_distribution(generator) > current_chance) return false;
     }
 
-    // Выбираем случайного свободного соседа
-    std::uniform_int_distribution<std::size_t> distribution(0, free_neighbours.size() - 1);
-    Cell* place_for_child = free_neighbours[distribution(generator)];
+    // Выбираем соседа с наибольшим количеством еды (умный поиск/хемотаксис)
+    double max_food = -1.0;
+    for (Cell* nb : free_neighbours) {
+        max_food = std::max(max_food, nb->get_food().get_amount());
+    }
+
+    std::vector<Cell*> best_neighbours;
+    for (Cell* nb : free_neighbours) {
+        if (std::abs(nb->get_food().get_amount() - max_food) < 1e-5) {
+            best_neighbours.push_back(nb);
+        }
+    }
+
+    std::uniform_int_distribution<std::size_t> distribution(0, best_neighbours.size() - 1);
+    Cell* place_for_child = best_neighbours[distribution(generator)];
 
     double child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
     biomass = biomass - child_biomass;

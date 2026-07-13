@@ -11,9 +11,12 @@ struct SimulationStats {
     long long liveCells = 0;
     long long deadCells = 0;
     long long emptyCells = 0;
-    float avgFood = 0.0f;
-    float totalFood = 0.0f;
+    double avgFood = 0.0;
+    double totalFood = 0.0;
     int maxHeight = 0;
+    double avgAntibiotic = 0.0;
+    double maxAntibiotic = 0.0;
+    double avgBiomass = 0.0;
 };
 
 SimulationStats collectStats(const Field& field, int tick);

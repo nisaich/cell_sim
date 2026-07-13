@@ -3,18 +3,19 @@
 namespace simulation_config {
 
     // ============================================================
-    // СЦЕНАРИЙ: Древовидная (ветвистая) структура биоплёнки (Dendritic Pattern)
+    // СЦЕНАРИЙ: Супербактерии (Superbugs - Multi-Drug Resistant)
     // ============================================================
-    // Причина ветвления в физике роста микроколоний — Diffusion-Limited Growth (DLG).
-    // Если питательных веществ мало (голодный режим) и диффузия медленная,
-    // клетки на поверхности съедают всю пищу до того, как она проникнет вглубь.
-    // В итоге растут только выдающиеся наружу "пальцы" или ветви, стремящиеся к пище.
+    // Этот сценарий моделирует популяцию с чрезвычайно эффективными
+    // механизмами защиты (гиперактивные эффлюксные насосы TtgABC с низким штрафом).
     //
     // Настройки для этого режима:
     // 1. Исходные константы Monod полностью сохранены (K_F = 1500.0, U_max = 0.48/3600).
-    // 2. Начальное питание в объеме: initial_food = 200.0 (чтобы клетки стартовали активными и не засыпали сразу).
-    // 3. Очень медленная диффузия глюкозы: food_diffusion_coeff = 0.005 (создает резкий локальный дефицит).
-    // 4. Постоянный приток свежего питания сверху (частое добавление: steps_for_adding_food = 100).
+    // 2. Постоянная подача огромных доз антибиотика (среднее значение 8.0 при MIC = 2.0).
+    // 3. Высокая базовая устойчивость: default_resistance = 1.0 (в 70 000 раз выше нормы!).
+    // 4. Мгновенная индукция насосов: k_ind = 0.50 (выходят на максимум за 1 минуту).
+    // 5. Почти нулевое расслабление: k_rec = 0.001 (насосы постоянно открыты).
+    // 6. Минимальный фитнес-штраф за насосы: fitness_cost_coef = 0.02 (тратят всего 2% энергии).
+    // 7. Устойчивость к стрессу при делении: reproduction_penalty = 0.90 (делятся почти без штрафа).
     // ============================================================
 
     namespace monod {
@@ -39,28 +40,26 @@ namespace simulation_config {
         inline constexpr int width  = 100;
         inline constexpr int height = 200;
 
-        // Достаточная начальная концентрация для старта роста
-        inline constexpr double initial_food         = 200.0; 
+        inline constexpr double initial_food         = 280.0;
+        inline constexpr double food_diffusion_coeff = 0.20;
 
-        // Экстремально низкая диффузия для DLG-режима
-        inline constexpr double food_diffusion_coeff = 0.005; 
-
-        // Частое добавление еды только сверху
-        inline constexpr int    steps_for_adding_food  = 100;
-        inline constexpr double count_of_adding_food   = 40.0; 
+        inline constexpr int    steps_for_adding_food  = 1000;
+        inline constexpr double count_of_adding_food   = 20.0;
     }
 
     namespace biomass {
-        inline constexpr double dispersion_chance  = 0.0001; // низкий разлёт, чтобы ветки не склеивались
-        inline constexpr int    dispersion_radius  = 5;
+        inline constexpr double dispersion_chance  = 0.001;
+        inline constexpr int    dispersion_radius  = 10;
 
         inline constexpr int    max_count_reps     = 10000;
         inline constexpr double initial_biomass    = 0.5;
         inline constexpr double max_biomass        = 1.0;
         inline constexpr double child_biomass_ratio      = 0.5;
         inline constexpr double reproduction_min_biomass = 0.7;
-        inline constexpr int    default_max_age    = 100000;
-        inline constexpr double default_resistance = 0.000015;
+        inline constexpr int    default_max_age    = 1000000;
+        
+        // Высокая врожденная мутационная устойчивость
+        inline constexpr double default_resistance = 1.0; 
 
         inline constexpr double nonactive_resistance_multiplier = 2.0;
         inline constexpr double nonactive_max_life_multiplier   = 2.0;
@@ -68,22 +67,26 @@ namespace simulation_config {
     }
 
     namespace antibiotic {
-        inline constexpr double death_threshold = 0.5;
+        inline constexpr double death_threshold = 2.0;
 
-        inline constexpr double reproduction_penalty   = 0.5;
-        inline constexpr double stress_transition_chance = 0.05;
+        // Почти не снижают темп размножения под лекарством
+        inline constexpr double reproduction_penalty   = 0.90; 
+        // Не паникуют и не уходят в спячку при стрессе
+        inline constexpr double stress_transition_chance = 0.01; 
 
         inline constexpr double diffusion_coeff = 0.01;
-        inline constexpr double decay_rate = 0.001;
+        inline constexpr double decay_rate = 0.0001;
 
-        inline constexpr double concetration_for_next_step     = 0.0;
-        inline constexpr double middle_value_of_antibiotic     = 0.0;
-        inline constexpr double visualization_normalizer       = 1.0;
+        // Агрессивная, постоянная подача антибиотика, превышающая MIC
+        inline constexpr double concetration_for_next_step     = 3.0; // шаги добавления по +3.0
+        inline constexpr double middle_value_of_antibiotic     = 8.0; // поддерживаем концентрацию ~8.0
+        inline constexpr double visualization_normalizer       = 10.0;
 
-        inline constexpr double k_ind = 0.005;
-        inline constexpr double K_ind = 0.5;
-        inline constexpr double k_rec = 0.001;
-        inline constexpr double fitness_cost_coef = 0.35;
+        // Гиперактивная помповая система
+        inline constexpr double k_ind = 0.50; // Взрывная индукция
+        inline constexpr double K_ind = 1.0;
+        inline constexpr double k_rec = 0.001; // Насосы почти не закрываются назад
+        inline constexpr double fitness_cost_coef = 0.02; // Практически бесплатная защита
     }
 
     namespace visualization {

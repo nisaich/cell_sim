@@ -5,6 +5,5 @@
 #include <string>
 
 void visualize(
-    Field& simulation_field,
-    const std::string& colorMode
+    Field& simulation_field
 );

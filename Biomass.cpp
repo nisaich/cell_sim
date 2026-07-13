@@ -1,42 +1,60 @@
 #include "Biomass.hpp"
-
 #include "Field.hpp"
 #include "Food.hpp"
-
+#include "Antibiotic.hpp"
 #include <algorithm>
 #include <memory>
 #include <random>
 #include <vector>
 
-int abstract_Biomass::get_age() const { 
+// ---------- abstract_Biomass ----------
+int abstract_Biomass::get_age() const {
     return age_of_cell;
 }
 
 void abstract_Biomass::copy_common_state_to(abstract_Biomass& other) const {
     other.age_of_cell = age_of_cell;
     other.biomass = biomass;
-    other.max_amount_of_food_consumed = max_amount_of_food_consumed;
-    other.using_food_for_step = using_food_for_step;
-
     other.max_age_of_cell = max_age_of_cell;
     other.level_of_resistance = level_of_resistance;
+    other.nucleus = nucleus;
 }
 
-float abstract_Biomass::get_level_of_resistance() const {
+double abstract_Biomass::get_level_of_resistance() const {
     return level_of_resistance;
 }
 
-
-float abstract_Biomass::get_biomass() const {
-  return biomass;
+double abstract_Biomass::get_biomass() const {
+    return biomass;
 }
 
-bool abstract_Biomass::must_he_die(Food& food) const {
-    return age_of_cell >= max_age_of_cell || biomass <= 0.0f;
+bool abstract_Biomass::must_he_die(Field& current_field, int x, int y) const {
+    if (age_of_cell >= max_age_of_cell || biomass <= 0.001) return true;
+
+    Cell& nucleus_ref = current_field.get_nucleus(x, y);
+
+    // Смерть от голода (если биомасса ниже порога спячки и еды в среде нет)
+    if (biomass < simulation_config::monod::starvation_biomass_threshold && nucleus_ref.get_food().get_amount() <= 0.0) {
+        return true;
+    }
+
+    // Смерть от антибиотика
+    double conc = nucleus_ref.get_antibiotic().get_concentration();
+    double excess = conc - level_of_resistance;
+    if (excess > 0.0) {
+        if (excess > simulation_config::antibiotic::death_threshold) {
+            nucleus_ref.get_antibiotic().set_concentration(excess);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void abstract_Biomass::increase_age() {
-    ++age_of_cell;
+    if (is_active_for_monod() > 0.0) {
+        ++age_of_cell;
+    }
 }
 
 void abstract_Biomass::set_nucleus(Cell* current_nucleus) {
@@ -51,44 +69,38 @@ bool abstract_Biomass::should_be_removed_from_field() const {
     return false;
 }
 
-void abstract_Biomass::food_consumption_from_environment(Food& food) {
-    float wanted_food = std::min(food.get_amount(), static_cast<float>(max_amount_of_food_consumed));
-    if (wanted_food > 0.0f && biomass < simulation_config::biomass::max_biomass) {
-        float eaten = food.take(wanted_food);
-        biomass += eaten;
+void abstract_Biomass::consume_and_decay(Food& food) {
+    double a = is_active_for_monod();
+    double F = food.get_amount();
+
+    // Плата за активные эффлюксные насосы: чем выше ощить, тем медленнее клетка ест (fitness cost)
+    double fitness_penalty = 1.0 - simulation_config::antibiotic::fitness_cost_coef * level_of_resistance;
+
+    double u = 0.0;
+    if (F > 0.0) {
+        u = simulation_config::monod::U_max * (F / (simulation_config::monod::K_F + F)) * a * fitness_penalty;
     }
+
+    double u_dt = u * simulation_config::monod::delta_t;
+    double space_limit = std::max(0.0, (simulation_config::biomass::max_biomass - biomass) / simulation_config::monod::Y_B_F);
+
+    double delta_Food = std::min({ F, u_dt, space_limit });
+    if (delta_Food < 0.0) delta_Food = 0.0;
+
+    food.take(delta_Food);
+
+    biomass += simulation_config::monod::Y_B_F * delta_Food;
+
+    double m = get_maintenance_rate();
+    biomass = std::max(0.0, biomass * (1.0 - m * simulation_config::monod::delta_t));
 }
 
-void abstract_Biomass::depletion_of_savings(Food& food) {
-    float available_food = food.get_amount();
-    if (steps_for_nonactivating != simulation_config::biomass::steps_for_nonactivating && \
-        steps_for_nonactivating != 0){
-      steps_for_nonactivating--;
-    }
-    else if (available_food < steps_to_live_forward * using_food_for_step && \
-        steps_for_nonactivating >0) {
-      steps_for_nonactivating--;
-    }
-    else if(steps_for_nonactivating == 0){
-      auto nonactive_cell = std::make_shared<nonactive_Biomass>();
-      copy_common_state_to(*nonactive_cell);
-      nucleus->set_cell(nonactive_cell);
-      steps_for_nonactivating= simulation_config::biomass::steps_for_nonactivating;
-      return;
-    }
-
-    float eaten = food.take(using_food_for_step);
-    float deficit = using_food_for_step - eaten;
-    if (deficit > 0.0f) {
-        biomass = std::max(0.0f, biomass - deficit);
-    }
-}
-
-bool abstract_Biomass::reproduction(Field& current_field, int x, int y) {
+bool abstract_Biomass::reproduction(Field& /*current_field*/, int /*x*/, int /*y*/) {
     return false;
 }
 
-active_Biomass::active_Biomass(float resistance, int max_age) {
+// ---------- active_Biomass ----------
+active_Biomass::active_Biomass(double resistance, int max_age) {
     level_of_resistance = resistance;
     max_age_of_cell = max_age;
 }
@@ -97,112 +109,190 @@ bool active_Biomass::is_alive() const {
     return true;
 }
 
-bool active_Biomass::reproduction(Field& current_field, int x, int y) {
-    std::vector<Cell*> free_neighbours = current_field.get_free_neighbours(x, y);
-    if (max_count_reps == 0) {
-      return false;
-    }
-    if (free_neighbours.empty()) {
-      return false;
-    }
+void active_Biomass::consume_and_decay(Food& food) {
+    abstract_Biomass::consume_and_decay(food);
+    steps_active++;
 
-    if (biomass < simulation_config::biomass::reproduction_min_biomass) {
-      return false;
-    }
-
-    static std::mt19937 generator(std::random_device{}());
-
-    std::uniform_real_distribution<float> chance_distribution(0.00f, 1.00f);
-
-    float reproduction_chance = simulation_config::biomass::reproduction_chance;
-
-    if (chance_distribution(generator) > reproduction_chance) {
-      return false;
-    }
-
-    // Выбираем соседа с наибольшим количеством еды (направленный рост)
-    float max_food = -1.0f;
-    for (Cell* nb : free_neighbours) {
-        max_food = std::max(max_food, nb->get_food().get_amount());
-    }
-
-    std::vector<Cell*> best_neighbours;
-    for (Cell* nb : free_neighbours) {
-        if (std::abs(nb->get_food().get_amount() - max_food) < 1e-5f) {
-            best_neighbours.push_back(nb);
+    // Переход в дормантное состояние при длительном голодании
+    if (nucleus != nullptr && biomass < simulation_config::monod::starvation_biomass_threshold) {
+        int ticks_needed = static_cast<int>(simulation_config::monod::steps_for_waking_up / simulation_config::monod::delta_t);
+        if (ticks_needed < 1) ticks_needed = 1;
+        if (steps_active >= ticks_needed) {
+            auto nonactive = std::make_shared<nonactive_Biomass>();
+            copy_common_state_to(*nonactive);
+            nonactive->apply_dormancy_effects();
+            nucleus->set_cell(nonactive);
+            return;
         }
     }
 
-    std::uniform_int_distribution<std::size_t> distribution(
-        0,
-        best_neighbours.size() - 1
-    );
+    if (nucleus == nullptr) return;
 
-    Cell* place_for_child = best_neighbours[distribution(generator)];
+    // Физиологическая адаптация резистентности (без деления, без случайности)
+    // Индукция (по закону Моно): есть антибиотик → поднимаем щиты
+    // Релаксация: нет антибиотика → возвращаемся к "дикому" уровню
+    double conc = nucleus->get_antibiotic().get_concentration();
+    double dt = simulation_config::monod::delta_t;
+    double r_default = simulation_config::biomass::default_resistance;
 
-    float child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
+    if (conc > 0.0) {
+        // Режим индукции: насосы включаются пропорционально концентрации (закон Моно)
+        double delta_r = simulation_config::antibiotic::k_ind
+                        * (conc / (simulation_config::antibiotic::K_ind + conc))
+                        * (1.0 - level_of_resistance)
+                        * dt;
+        level_of_resistance = std::min(1.0, level_of_resistance + delta_r);
+    } else {
+        // Режим релаксации: насосы отключаются, клетка возвращается к базовому состоянию
+        double delta_r = simulation_config::antibiotic::k_rec
+                        * (level_of_resistance - r_default)
+                        * dt;
+        level_of_resistance = std::max(r_default, level_of_resistance - delta_r);
+    }
+
+    // Переход в спящее состояние из-за стресса от антибиотика
+    double excess = conc - level_of_resistance;
+    if (excess > 0.0) {
+        static std::mt19937 gen(std::random_device{}());
+        std::uniform_real_distribution<double> dist(0.0, 1.0);
+        double base_chance = std::min(excess * 0.01, static_cast<double>(simulation_config::antibiotic::stress_transition_chance));
+        // Адаптация вероятности к размеру шага dt
+        double adjusted_chance = 1.0 - std::pow(1.0 - base_chance, dt);
+        if (dist(gen) < adjusted_chance) {
+            auto nonactive = std::make_shared<nonactive_Biomass>();
+            copy_common_state_to(*nonactive);
+            nonactive->apply_dormancy_effects();
+            nucleus->set_cell(nonactive);
+            return;
+        }
+    }
+}
+
+bool active_Biomass::reproduction(Field& current_field, int x, int y) {
+    std::vector<Cell*> free_neighbours = current_field.get_free_neighbours(x, y);
+    if (max_count_reps == 0) return false;
+    if (free_neighbours.empty()) return false;
+    if (biomass < simulation_config::biomass::reproduction_min_biomass) return false;
+
+    static std::mt19937 generator(std::random_device{}());
+
+    double current_chance = 1.0;
+    if (nucleus != nullptr) {
+        double conc = nucleus->get_antibiotic().get_concentration();
+        double excess = conc - level_of_resistance;
+        if (excess > 0.0) {
+            double penalty = std::min(excess * 0.1, static_cast<double>(simulation_config::antibiotic::reproduction_penalty));
+            current_chance *= (1.0 - penalty);
+        }
+    }
+
+    if (current_chance < 1.0) {
+        std::uniform_real_distribution<double> chance_distribution(0.0, 1.0);
+        if (chance_distribution(generator) > current_chance) return false;
+    }
+
+    // Выбираем случайного свободного соседа
+    std::uniform_int_distribution<std::size_t> distribution(0, free_neighbours.size() - 1);
+    Cell* place_for_child = free_neighbours[distribution(generator)];
+
+    double child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
     biomass = biomass - child_biomass;
-    auto child = std::make_shared<active_Biomass>(
-      level_of_resistance,
-      max_age_of_cell
-    );
+
+    auto child = std::make_shared<active_Biomass>(level_of_resistance, max_age_of_cell);
     child->biomass = child_biomass;
 
-    child->max_amount_of_food_consumed = max_amount_of_food_consumed;
-    child->using_food_for_step = using_food_for_step;
+    // ---- ЛОГИКА ПРЫЖКА (DISPERSION) ----
+    std::uniform_real_distribution<double> dispersion_dist(0.0, 1.0);
+    if (dispersion_dist(generator) < simulation_config::biomass::dispersion_chance) {
+        int R = simulation_config::biomass::dispersion_radius;
+        std::vector<Cell*> potential_targets;
 
-    place_for_child->set_cell(child);
+        int start_x = std::max(0, x - R);
+        int end_x = std::min(simulation_config::field::width - 1, x + R);
+        int start_y = std::max(0, y - R);
+        int end_y = std::min(simulation_config::field::height - 1, y + R);
 
+        for (int i = start_x; i <= end_x; ++i) {
+            for (int j = start_y; j <= end_y; ++j) {
+                if (i == x && j == y) continue;
+                Cell& target = current_field.get_nucleus(i, j);
+                if (target.is_this_nucleus_free()) {
+                    bool supported = false;
+                    for (Cell* nb : current_field.get_neighbours(i, j)) {
+                        if (!nb->is_this_nucleus_free()) {
+                            supported = true;
+                            break;
+                        }
+                    }
+                    if (supported) {
+                        potential_targets.push_back(&target);
+                    }
+                }
+            }
+        }
+
+        if (!potential_targets.empty()) {
+            std::uniform_int_distribution<std::size_t> target_dist(0, potential_targets.size() - 1);
+            place_for_child = potential_targets[target_dist(generator)];
+        }
+    }
+    // ----------------------------------
+
+    current_field.place_cell(place_for_child->coordinates()[0], place_for_child->coordinates()[1], child);
     return true;
 }
 
-nonactive_Biomass::nonactive_Biomass(
-    float resistance,
-    int max_age,
-    float max_food_consumed,
-    float food_usage
-) {
+// ---------- nonactive_Biomass ----------
+nonactive_Biomass::nonactive_Biomass(double resistance, int max_age) {
     level_of_resistance = resistance * resistance_multiplier;
-    
     max_age_of_cell = static_cast<int>(max_age * max_life_multiplier);
-
-    max_amount_of_food_consumed = max_food_consumed;
-    using_food_for_step = food_usage * food_usage_multiplier;
 }
 
-void nonactive_Biomass::depletion_of_savings(Food& food) {
-    float available_food = food.get_amount();
-    if (available_food < using_food_for_step) {
-        biomass = std::max(
-            0.0f,
-            biomass - using_food_for_step *
-                simulation_config::biomass::nonactive_biomass_loss_multiplier
-        );
-        return;
-    }
+void nonactive_Biomass::apply_dormancy_effects() {
+    level_of_resistance *= resistance_multiplier;
+    max_age_of_cell = static_cast<int>(max_age_of_cell * max_life_multiplier);
+}
 
-    food.take(using_food_for_step);
+double nonactive_Biomass::baseline_resistance() const {
+    if (resistance_multiplier <= 0.0) return level_of_resistance;
+    return level_of_resistance / resistance_multiplier;
+}
+
+int nonactive_Biomass::baseline_max_age() const {
+    if (max_life_multiplier <= 0.0f) return max_age_of_cell;
+    return static_cast<int>(max_age_of_cell / max_life_multiplier);
 }
 
 bool nonactive_Biomass::reproduction(Field& current_field, int x, int y) {
-    const float food_now = simulation_config::biomass::food_usage_for_step;
     Cell& nucleus = current_field.get_nucleus(x, y);
-    if (nucleus.get_food().get_amount() < steps_to_live_forward * food_now) {
-        return false;
-    }
-    else if (steps_for_nonactivating > 0) {
-      steps_for_nonactivating--;
-    }
-    else if (steps_for_nonactivating == 0){
-      auto active_cell = std::make_shared<active_Biomass>();
-      copy_common_state_to(*active_cell);
 
-      nucleus.set_cell(active_cell);
+    if (steps_until_wakeup > 0) {
+        steps_until_wakeup--;
+        if (steps_until_wakeup == 0) {
+            auto active_cell = std::make_shared<active_Biomass>();
+            copy_common_state_to(*active_cell);
+            active_cell->level_of_resistance = baseline_resistance();
+            active_cell->max_age_of_cell = baseline_max_age();
+            nucleus.set_cell(active_cell);
+        }
+    }
+    else {
+        double F = nucleus.get_food().get_amount();
+        double potential_income = simulation_config::monod::Y_B_F *
+            (simulation_config::monod::U_max * F / (simulation_config::monod::K_F + F) * simulation_config::monod::delta_t);
+        double threshold = simulation_config::monod::m_act * simulation_config::monod::delta_t * biomass * simulation_config::monod::greed_coefficient;
+
+        if (potential_income > threshold) {
+            int ticks_needed = static_cast<int>(simulation_config::monod::steps_for_waking_up / simulation_config::monod::delta_t);
+            if (ticks_needed < 1) ticks_needed = 1;
+            steps_until_wakeup = ticks_needed;
+        }
     }
 
     return false;
 }
 
+// ---------- dead_Biomass ----------
 void dead_Biomass::step_after_death() {
     ++count_of_steps_from_death;
 }

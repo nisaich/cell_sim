@@ -12,9 +12,9 @@ namespace simulation_config {
     //
     // Настройки для этого режима:
     // 1. Исходные константы Monod полностью сохранены (K_F = 1500.0, U_max = 0.48/3600).
-    // 2. Начальное питание в объеме: initial_food = 200.0 (чтобы клетки стартовали активными и не засыпали сразу).
-    // 3. Очень медленная диффузия глюкозы: food_diffusion_coeff = 0.005 (создает резкий локальный дефицит).
-    // 4. Постоянный приток свежего питания сверху (частое добавление: steps_for_adding_food = 100).
+    // 2. Начальная еда: initial_food = 380.0 (при K_F = 1500.0 это дает предел биомассы ~0.9, что позволяет начальным клеткам делиться).
+    // 3. Очень медленная диффузия глюкозы: food_diffusion_coeff = 0.003 (создает резкий локальный дефицит после выедания).
+    // 4. Обильный приток питания сверху: count_of_adding_food = 500.0 каждые 100 шагов (поддерживает деление растущих верхушек ветвей).
     // ============================================================
 
     namespace monod {
@@ -39,15 +39,15 @@ namespace simulation_config {
         inline constexpr int width  = 100;
         inline constexpr int height = 200;
 
-        // Достаточная начальная концентрация для старта роста
-        inline constexpr double initial_food         = 200.0; 
+        // Достаточная начальная концентрация для старта роста и деления при K_F = 1500.0
+        inline constexpr double initial_food         = 380.0; 
 
         // Экстремально низкая диффузия для DLG-режима
-        inline constexpr double food_diffusion_coeff = 0.005; 
+        inline constexpr double food_diffusion_coeff = 0.003; 
 
         // Частое добавление еды только сверху
         inline constexpr int    steps_for_adding_food  = 100;
-        inline constexpr double count_of_adding_food   = 40.0; 
+        inline constexpr double count_of_adding_food   = 500.0; 
     }
 
     namespace biomass {

@@ -630,20 +630,44 @@ static void runViewer(const std::string& mode) {
         colorMode = CellColorMode::Age;
     }
 
+    // Ожидаем появления файла состояния, чтобы узнать размеры сетки
+    int width = 100;
+    int height = 200;
+    for (int attempts = 0; attempts < 100; ++attempts) {
+        std::ifstream in("/dev/shm/simulation_state.dat", std::ios::binary);
+        if (in.is_open()) {
+            SharedHeader header;
+            in.read(reinterpret_cast<char*>(&header), sizeof(header));
+            if (in) {
+                width = header.width;
+                height = header.height;
+                break;
+            }
+        }
+        usleep(50000); // 50ms
+    }
+
+    float defaultCellSize = 4.0f;
+    int windowW = static_cast<int>(width * defaultCellSize + 16);
+    int windowH = static_cast<int>(height * defaultCellSize + 48);
+
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(400, 900, title.c_str());
+    InitWindow(windowW, windowH, title.c_str());
 
     // Размещаем окна в зависимости от режима при открытии
     int monitor = GetCurrentMonitor();
     int screenW = GetMonitorWidth(monitor);
     int screenH = GetMonitorHeight(monitor);
-    int startY = (screenH - 900) / 2;
+    int startY = (screenH - windowH) / 2;
+    int totalW = windowW * 3 + 40; // 3 окна с отступами по 20px
+    int startX = (screenW - totalW) / 2;
+
     if (mode == "food") {
-        SetWindowPosition((screenW - 1200) / 2, startY);
+        SetWindowPosition(startX, startY);
     } else if (mode == "antibiotic") {
-        SetWindowPosition((screenW - 1200) / 2 + 410, startY);
+        SetWindowPosition(startX + windowW + 20, startY);
     } else if (mode == "age") {
-        SetWindowPosition((screenW - 1200) / 2 + 820, startY);
+        SetWindowPosition(startX + 2 * (windowW + 20), startY);
     }
 
     SetTargetFPS(60);
@@ -730,6 +754,9 @@ void visualize(
     // Иначе это главный координатор (запускает симуляцию + вьюер еды)
     unlink("/dev/shm/simulation_state.dat");
 
+    // Записываем начальное состояние, чтобы дочерние процессы знали размеры поля
+    exportSharedState(simulation_field, 0, true);
+
     pid_t pid1 = fork();
     if (pid1 == 0) {
         char* child_argv[] = { argv[0], (char*)"--viewer", (char*)"antibiotic", nullptr };
@@ -745,14 +772,24 @@ void visualize(
     }
 
     // Запускаем окно для еды (Food) в главном процессе
+    int width = simulation_field.get_width();
+    int height = simulation_field.get_height();
+
+    float defaultCellSize = 4.0f;
+    int windowW = static_cast<int>(width * defaultCellSize + 16);
+    int windowH = static_cast<int>(height * defaultCellSize + 48);
+
     std::string title = "Food Concentration (Nutrition)";
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(400, 900, title.c_str());
+    InitWindow(windowW, windowH, title.c_str());
 
     int monitor = GetCurrentMonitor();
     int screenW = GetMonitorWidth(monitor);
     int screenH = GetMonitorHeight(monitor);
-    SetWindowPosition((screenW - 1200) / 2, (screenH - 900) / 2);
+    int startY = (screenH - windowH) / 2;
+    int totalW = windowW * 3 + 40;
+    int startX = (screenW - totalW) / 2;
+    SetWindowPosition(startX, startY);
 
     SetTargetFPS(simulation_config::visualization::target_fps);
 

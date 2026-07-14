@@ -46,7 +46,7 @@ namespace simulation_config {
 
         inline constexpr double nonactive_resistance_multiplier = 1000.0;
         inline constexpr double nonactive_max_life_multiplier   = 1000.0;
-        inline constexpr int    dead_steps_to_disappearance     = 100;
+        inline constexpr int    dead_steps_to_disappearance     = 1000;
     }
 
     namespace antibiotic {
@@ -75,7 +75,7 @@ namespace simulation_config {
         inline constexpr int initial_window_height = 900;
 
         inline constexpr int target_fps      = 0;
-        inline constexpr int steps_per_frame = 500;
+        inline constexpr int steps_per_frame = 100;
 
         inline constexpr int    graph_panel_width            = 400;
         inline constexpr int    modified_content_gap         = 20;

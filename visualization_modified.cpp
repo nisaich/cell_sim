@@ -505,9 +505,9 @@ private:
             1.0
         );
         double antibiotic = std::clamp(
-            state.antibiotic,
+            state.antibiotic / simulation_config::antibiotic::visualization_normalizer,
             0.0,
-            simulation_config::antibiotic::visualization_normalizer
+            1.0
         );
 
         // Calculate base color based on state_nucleus

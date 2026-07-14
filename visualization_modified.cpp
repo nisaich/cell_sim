@@ -389,29 +389,7 @@ protected:
     }
 };
 
-static void drawAntibioticLegend(int x, int y) {
-    const int barWidth = simulation_config::visualization::legend_width;
-    const int barHeight = simulation_config::visualization::legend_height;
-    const int fontSize = simulation_config::visualization::legend_font_size;
 
-    // Полупрозрачная подложка, чтобы легенда читалась над полем любого цвета
-    DrawRectangle(x - 6, y - 6, barWidth + 90, barHeight + 20, Color{ 255, 255, 255, 180 });
-
-    // Градиент "чёрный (0) -> синий (max)", как у пустых клеток в этом режиме
-    for (int i = 0; i < barHeight; ++i) {
-        float t = 1.0f - static_cast<float>(i) / static_cast<float>(barHeight - 1);
-        unsigned char intensity = static_cast<unsigned char>(t * 255);
-        DrawRectangle(x, y + i, barWidth, 1, Color{ 0, 0, intensity, 255 });
-    }
-    DrawRectangleLines(x, y, barWidth, barHeight, GRAY);
-
-    DrawText(
-        TextFormat("%.2f", simulation_config::antibiotic::visualization_normalizer),
-        x + barWidth + 6, y - 2, fontSize, DARKGRAY
-    );
-    DrawText("0", x + barWidth + 6, y + barHeight - fontSize + 2, fontSize, DARKGRAY);
-    DrawText("Antibiotic", x, y + barHeight + 4, fontSize, DARKGRAY);
-}
 
 static void drawPanelContainer(const char* title, int x, int y, int w, int h) {
     // Рисуем рамку контейнера
@@ -485,54 +463,43 @@ void visualize(
         int screenWidth = GetScreenWidth();
         int screenHeight = GetScreenHeight();
 
-        // Сетка 2x2 с отступами по 4 пикселя
+        // Сетка 1x3 (3 вертикальных панели) с отступами по 4 пикселя
+        int panel_w = screenWidth / 3 - 6;
+        int panel_h = screenHeight - 8;
+
         int panel1_x = 4;
         int panel1_y = 4;
-        int panel1_w = screenWidth / 2 - 6;
-        int panel1_h = screenHeight / 2 - 6;
 
-        int panel2_x = screenWidth / 2 + 2;
+        int panel2_x = screenWidth / 3 + 2;
         int panel2_y = 4;
-        int panel2_w = screenWidth / 2 - 6;
-        int panel2_h = screenHeight / 2 - 6;
 
-        int panel3_x = 4;
-        int panel3_y = screenHeight / 2 + 2;
-        int panel3_w = screenWidth / 2 - 6;
-        int panel3_h = screenHeight / 2 - 6;
-
-        int panel4_x = screenWidth / 2 + 2;
-        int panel4_y = screenHeight / 2 + 2;
-        int panel4_w = screenWidth / 2 - 6;
-        int panel4_h = screenHeight / 2 - 6;
+        int panel3_x = (2 * screenWidth) / 3 + 2;
+        int panel3_y = 4;
 
         BeginDrawing();
         ClearBackground(Color{ 220, 220, 220, 255 }); // Серый фон между панелями
 
-        // 1. Панель еды (Top-Left)
-        drawPanelContainer("Food Concentration (Nutrition)", panel1_x, panel1_y, panel1_w, panel1_h);
-        float cell1 = std::min((float)(panel1_w - 16) / width, (float)(panel1_h - 24 - 16) / height);
-        float start1_x = panel1_x + 8.0f + (panel1_w - 16 - width * cell1) / 2.0f;
-        float start1_y = panel1_y + 24.0f + 8.0f + (panel1_h - 24 - 16 - height * cell1) / 2.0f;
+        // 1. Панель еды (Left)
+        drawPanelContainer("Food Concentration (Nutrition)", panel1_x, panel1_y, panel_w, panel_h);
+        float cell1 = std::min((float)(panel_w - 16) / width, (float)(panel_h - 24 - 16) / height);
+        float start1_x = panel1_x + 8.0f + (panel_w - 16 - width * cell1) / 2.0f;
+        float start1_y = panel1_y + 24.0f + 8.0f + (panel_h - 24 - 16 - height * cell1) / 2.0f;
         visualizationBiomass.draw(width, height, simulation_field.get_field(), start1_x, start1_y, cell1, CellColorMode::Nutrition);
 
-        // 2. Панель антибиотика (Top-Right)
-        drawPanelContainer("Antibiotic Concentration", panel2_x, panel2_y, panel2_w, panel2_h);
-        float cell2 = std::min((float)(panel2_w - 16) / width, (float)(panel2_h - 24 - 16) / height);
-        float start2_x = panel2_x + 8.0f + (panel2_w - 16 - width * cell2) / 2.0f;
-        float start2_y = panel2_y + 24.0f + 8.0f + (panel2_h - 24 - 16 - height * cell2) / 2.0f;
+        // 2. Панель антибиотика (Center)
+        drawPanelContainer("Antibiotic Concentration", panel2_x, panel2_y, panel_w, panel_h);
+        float cell2 = std::min((float)(panel_w - 16) / width, (float)(panel_h - 24 - 16) / height);
+        float start2_x = panel2_x + 8.0f + (panel_w - 16 - width * cell2) / 2.0f;
+        float start2_y = panel2_y + 24.0f + 8.0f + (panel_h - 24 - 16 - height * cell2) / 2.0f;
         visualizationBiomass.draw(width, height, simulation_field.get_field(), start2_x, start2_y, cell2, CellColorMode::Antibiotic);
-        drawAntibioticLegend(static_cast<int>(panel2_x + 12), static_cast<int>(panel2_y + 36));
 
-        // 3. Панель возраста клеток (Bottom-Left)
-        drawPanelContainer("Cells (Age & State)", panel3_x, panel3_y, panel3_w, panel3_h);
-        float cell3 = std::min((float)(panel3_w - 16) / width, (float)(panel3_h - 24 - 16) / height);
-        float start3_x = panel3_x + 8.0f + (panel3_w - 16 - width * cell3) / 2.0f;
-        float start3_y = panel3_y + 24.0f + 8.0f + (panel3_h - 24 - 16 - height * cell3) / 2.0f;
+        // 3. Панель возраста клеток (Right)
+        drawPanelContainer("Cells (Age & State)", panel3_x, panel3_y, panel_w, panel_h);
+        float cell3 = std::min((float)(panel_w - 16) / width, (float)(panel_h - 24 - 16) / height);
+        float start3_x = panel3_x + 8.0f + (panel_w - 16 - width * cell3) / 2.0f;
+        float start3_y = panel3_y + 24.0f + 8.0f + (panel_h - 24 - 16 - height * cell3) / 2.0f;
         visualizationBiomass.draw(width, height, simulation_field.get_field(), start3_x, start3_y, cell3, CellColorMode::Age);
 
-        // 4. Панель графиков (Bottom-Right)
-        statsHistory.draw(panel4_x, panel4_y, panel4_w, panel4_h);
 
         EndDrawing();
     }

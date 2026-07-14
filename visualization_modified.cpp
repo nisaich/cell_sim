@@ -760,13 +760,11 @@ void visualize(
 
     const std::string statsPath = "simulation_stats.csv";
     CsvStatsRecorder statsRecorder(statsPath);
-    StatsHistory statsHistory;
     int tick = 0;
 
     if (statsRecorder.is_open()) {
         statsRecorder.record(simulation_field, tick);
     }
-    statsHistory.record(simulation_field, tick);
 
     start_simulation_time = std::chrono::high_resolution_clock::now();
     total_ticks_counter = 0;
@@ -792,7 +790,6 @@ void visualize(
             if (statsRecorder.is_open()) {
                 statsRecorder.record(simulation_field, tick);
             }
-            statsHistory.record(simulation_field, tick);
         }
 
         // Экспортируем состояние в разделяемую память

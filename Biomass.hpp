@@ -11,7 +11,6 @@ class abstract_Biomass {
     friend class Field;
 protected:
     int age_of_cell = 0;
-    int max_count_reps = simulation_config::biomass::max_count_reps;
     double biomass = simulation_config::biomass::initial_biomass;
     Cell* nucleus = nullptr;
     void copy_common_state_to(abstract_Biomass& other) const;

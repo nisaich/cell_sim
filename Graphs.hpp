@@ -31,12 +31,3 @@ public:
     bool is_open() const;
     void record(const Field& field, int tick);
 };
-
-class StatsHistory {
-private:
-    std::vector<SimulationStats> history;
-
-public:
-    void record(const Field& field, int tick);
-    void draw(int x, int y, int width, int height) const;
-};

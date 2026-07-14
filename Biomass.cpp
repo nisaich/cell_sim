@@ -163,7 +163,6 @@ void active_Biomass::consume_and_decay(Food& food) {
 
 bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     std::vector<Cell*> free_neighbours = current_field.get_free_neighbours(x, y);
-    if (max_count_reps == 0) return false;
     if (free_neighbours.empty()) return false;
     if (biomass < simulation_config::biomass::reproduction_min_biomass) return false;
 

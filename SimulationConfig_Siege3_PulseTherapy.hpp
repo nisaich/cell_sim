@@ -59,6 +59,7 @@ namespace simulation_config {
         inline constexpr double max_biomass        = 1.0;
         inline constexpr double child_biomass_ratio      = 0.5;
         inline constexpr double reproduction_min_biomass = 0.7;
+        inline constexpr double reproduction_chance      = 0.5;
         inline constexpr int    default_max_age    = 2880;
         inline constexpr double default_resistance = 0.000015;
 

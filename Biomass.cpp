@@ -168,7 +168,7 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
 
     static std::mt19937 generator(std::random_device{}());
 
-    double current_chance = 1.0;
+    double current_chance = simulation_config::biomass::reproduction_chance;
     if (nucleus != nullptr) {
         double conc = nucleus->get_antibiotic().get_concentration();
         double excess = conc - level_of_resistance;
@@ -178,10 +178,8 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
         }
     }
 
-    if (current_chance < 1.0) {
-        std::uniform_real_distribution<double> chance_distribution(0.0, 1.0);
-        if (chance_distribution(generator) > current_chance) return false;
-    }
+    std::uniform_real_distribution<double> chance_distribution(0.0, 1.0);
+    if (chance_distribution(generator) > current_chance) return false;
 
     // Выбираем соседа с наибольшим количеством еды (умный поиск/хемотаксис)
     double max_food = -1.0;

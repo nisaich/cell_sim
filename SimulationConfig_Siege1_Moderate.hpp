@@ -68,6 +68,7 @@ namespace simulation_config {
 
         // При F=2000 клетки достигают 0.7 за ~160 тиков — достижимо
         inline constexpr double reproduction_min_biomass = 0.7;
+        inline constexpr double reproduction_chance      = 0.5;
 
         // 2 дня — 2880 тиков (60 сек/тик)
         inline constexpr int    default_max_age    = 2880;

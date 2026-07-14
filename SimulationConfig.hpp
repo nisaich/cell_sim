@@ -38,14 +38,14 @@ namespace simulation_config {
         inline constexpr double child_biomass_ratio      = 0.5;
 
         inline constexpr double reproduction_min_biomass = 0.7;
-        inline constexpr double reproduction_chance      = 0.5;
+        inline constexpr double reproduction_chance      = 0.01;
 
         inline constexpr int    default_max_age    = 2880;
 
         inline constexpr double default_resistance = 0.0001;
 
-        inline constexpr double nonactive_resistance_multiplier = 2.0;
-        inline constexpr double nonactive_max_life_multiplier   = 2.0;
+        inline constexpr double nonactive_resistance_multiplier = 1000.0;
+        inline constexpr double nonactive_max_life_multiplier   = 1000.0;
         inline constexpr int    dead_steps_to_disappearance     = 100;
     }
 
@@ -57,8 +57,8 @@ namespace simulation_config {
         inline constexpr double reproduction_penalty     = 0.5;
         inline constexpr double stress_transition_chance = 0.05;
 
-        inline constexpr double diffusion_coeff = 0.003;
-        inline constexpr double decay_rate      = 0.0002;
+        inline constexpr double diffusion_coeff = 0.002;
+        inline constexpr double decay_rate      = 0.000;
 
         inline constexpr double concetration_for_next_step = 4.0;
         inline constexpr double middle_value_of_antibiotic = 8.0;
@@ -75,7 +75,7 @@ namespace simulation_config {
         inline constexpr int initial_window_height = 900;
 
         inline constexpr int target_fps      = 0;
-        inline constexpr int steps_per_frame = 1;
+        inline constexpr int steps_per_frame = 500;
 
         inline constexpr int    graph_panel_width            = 400;
         inline constexpr int    modified_content_gap         = 20;

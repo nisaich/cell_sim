@@ -412,7 +412,10 @@ struct SharedHeader {
 };
 
 static void exportSharedState(const Field& field, int tick, bool is_running) {
-    std::ofstream out("/dev/shm/simulation_state.dat", std::ios::binary);
+    std::string tmp_path = "/dev/shm/simulation_state.tmp";
+    std::string dat_path = "/dev/shm/simulation_state.dat";
+
+    std::ofstream out(tmp_path, std::ios::binary);
     if (!out.is_open()) return;
 
     SharedHeader header { field.get_width(), field.get_height(), tick, is_running };
@@ -455,6 +458,9 @@ static void exportSharedState(const Field& field, int tick, bool is_running) {
 
     out.write(reinterpret_cast<const char*>(states.data()), states.size() * sizeof(SharedCellState));
     out.close();
+
+    // Атомарное переименование файла, чтобы исключить чтение неполных данных
+    std::rename(tmp_path.c_str(), dat_path.c_str());
 }
 
 class VisualizationBiomassShared {
@@ -644,6 +650,10 @@ static void runViewer(const std::string& mode) {
 
     VisualizationBiomassShared visualizer("square");
 
+    SharedHeader last_header{0, 0, 0, false};
+    std::vector<SharedCellState> last_states;
+    bool has_cache = false;
+
     while (!WindowShouldClose()) {
         SharedHeader header{0, 0, 0, false};
         std::vector<SharedCellState> states;
@@ -662,21 +672,27 @@ static void runViewer(const std::string& mode) {
             in.close();
         }
 
+        if (loaded) {
+            last_header = header;
+            last_states = states;
+            has_cache = true;
+        }
+
         int screenWidth = GetScreenWidth();
         int screenHeight = GetScreenHeight();
 
         BeginDrawing();
         ClearBackground(RAYWHITE);
 
-        if (loaded) {
-            float cell = std::min((float)(screenWidth - 16) / header.width, (float)(screenHeight - 32 - 16) / header.height);
-            float startX = 8.0f + (screenWidth - 16 - header.width * cell) / 2.0f;
-            float startY = 32.0f + 8.0f + (screenHeight - 32 - 16 - header.height * cell) / 2.0f;
+        if (has_cache) {
+            float cell = std::min((float)(screenWidth - 16) / last_header.width, (float)(screenHeight - 32 - 16) / last_header.height);
+            float startX = 8.0f + (screenWidth - 16 - last_header.width * cell) / 2.0f;
+            float startY = 32.0f + 8.0f + (screenHeight - 32 - 16 - last_header.height * cell) / 2.0f;
 
-            visualizer.draw(header.width, header.height, states, startX, startY, cell, colorMode);
+            visualizer.draw(last_header.width, last_header.height, last_states, startX, startY, cell, colorMode);
             
-            std::string infoText = title + " | Tick: " + std::to_string(header.tick);
-            if (!header.is_running) {
+            std::string infoText = title + " | Tick: " + std::to_string(last_header.tick);
+            if (!last_header.is_running) {
                 infoText += " (FINISHED)";
             }
             DrawText(infoText.c_str(), 10, 8, 14, DARKGRAY);
@@ -755,6 +771,10 @@ void visualize(
     start_simulation_time = std::chrono::high_resolution_clock::now();
     total_ticks_counter = 0;
 
+    SharedHeader last_header{0, 0, 0, false};
+    std::vector<SharedCellState> last_states;
+    bool has_cache = false;
+
     while (!WindowShouldClose()) {
         bool was_running = simulation_field.has_living_cells();
 
@@ -803,14 +823,20 @@ void visualize(
         }
 
         if (loaded) {
-            float cell = std::min((float)(screenWidth - 16) / header.width, (float)(screenHeight - 32 - 16) / header.height);
-            float startX = 8.0f + (screenWidth - 16 - header.width * cell) / 2.0f;
-            float startY = 32.0f + 8.0f + (screenHeight - 32 - 16 - header.height * cell) / 2.0f;
+            last_header = header;
+            last_states = states;
+            has_cache = true;
+        }
 
-            visualizer.draw(header.width, header.height, states, startX, startY, cell, CellColorMode::Nutrition);
+        if (has_cache) {
+            float cell = std::min((float)(screenWidth - 16) / last_header.width, (float)(screenHeight - 32 - 16) / last_header.height);
+            float startX = 8.0f + (screenWidth - 16 - last_header.width * cell) / 2.0f;
+            float startY = 32.0f + 8.0f + (screenHeight - 32 - 16 - last_header.height * cell) / 2.0f;
+
+            visualizer.draw(last_header.width, last_header.height, last_states, startX, startY, cell, CellColorMode::Nutrition);
             
-            std::string infoText = title + " | Tick: " + std::to_string(header.tick);
-            if (!header.is_running) {
+            std::string infoText = title + " | Tick: " + std::to_string(last_header.tick);
+            if (!last_header.is_running) {
                 infoText += " (FINISHED)";
             }
             DrawText(infoText.c_str(), 10, 8, 14, DARKGRAY);

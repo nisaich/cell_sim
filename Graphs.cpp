@@ -244,6 +244,7 @@ void CsvStatsRecorder::record(const Field& field, int tick) {
         << stats.avgAntibiotic << ","
         << stats.maxAntibiotic << ","
         << stats.avgBiomass << "\n";
+    csv.flush();
 }
 
 SimulationStats collectStats(const Field& field, int tick) {

@@ -2,14 +2,14 @@
 
 class Food {
 private:
-    float amount = 0.0f;
+    double amount = 0.0;
 
 public:
     Food() = default;
-    explicit Food(float start_amount);
+    explicit Food(double start_amount);
 
-    float get_amount() const;
-    void set_amount(float value);
-    void add(float value);
-    float take(float wanted_amount);
+    double get_amount() const;
+    void set_amount(double value);
+    void add(double value);
+    double take(double wanted_amount);
 };

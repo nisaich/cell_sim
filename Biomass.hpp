@@ -12,22 +12,22 @@ class abstract_Biomass {
 protected:
     int age_of_cell = 0;
     int max_count_reps = simulation_config::biomass::max_count_reps;
-    float biomass = simulation_config::biomass::initial_biomass;
+    double biomass = simulation_config::biomass::initial_biomass;
     Cell* nucleus = nullptr;
     void copy_common_state_to(abstract_Biomass& other) const;
 
 public:
     int max_age_of_cell = simulation_config::biomass::default_max_age;
-    float level_of_resistance = simulation_config::biomass::default_resistance;
+    double level_of_resistance = simulation_config::biomass::default_resistance;
 
     virtual ~abstract_Biomass() = default;
 
     int get_age() const;
-    float get_level_of_resistance() const;
-    float get_biomass() const;
+    double get_level_of_resistance() const;
+    double get_biomass() const;
 
     // Теперь must_he_die принимает антибиотик
-    bool must_he_die(Food& food, const Antibiotic& antibiotic) const;
+    bool must_he_die(Field& current_field, int x, int y) const;
     void increase_age();
     void set_nucleus(Cell* current_nucleus);
 
@@ -36,42 +36,44 @@ public:
     virtual bool reproduction(Field& current_field, int x, int y);
 
     virtual void consume_and_decay(Food& food);
-    virtual float is_active_for_monod() const = 0;
-    virtual float get_maintenance_rate() const = 0;
+    virtual double is_active_for_monod() const = 0;
+    virtual double get_maintenance_rate() const = 0;
 
     virtual void step_after_death();
     virtual bool should_be_removed_from_field() const;
 };
 
 class active_Biomass : public abstract_Biomass {
+private:
+    int steps_active = 0;
 public:
     active_Biomass() = default;
-    active_Biomass(float resistance, int max_age);
+    active_Biomass(double resistance, int max_age);
 
     bool is_alive() const override;
     bool reproduction(Field& current_field, int x, int y) override;
     void consume_and_decay(Food& food) override;
-    float is_active_for_monod() const override { return 1.0f; }
-    float get_maintenance_rate() const override { return simulation_config::monod::m_act; }
+    double is_active_for_monod() const override { return 1.0; }
+    double get_maintenance_rate() const override { return simulation_config::monod::m_act; }
 };
 
 class nonactive_Biomass : public abstract_Biomass {
 private:
-    float resistance_multiplier = simulation_config::biomass::nonactive_resistance_multiplier;
-    float max_life_multiplier = simulation_config::biomass::nonactive_max_life_multiplier;
+    double resistance_multiplier = simulation_config::biomass::nonactive_resistance_multiplier;
+    double max_life_multiplier = simulation_config::biomass::nonactive_max_life_multiplier;
     int steps_until_wakeup = 0;
 public:
     nonactive_Biomass() = default;
     nonactive_Biomass(
-        float resistance,
+        double resistance,
         int max_age
     );
 
     bool is_alive() const override { return true; }
     bool reproduction(Field& current_field, int x, int y) override;
     
-    float is_active_for_monod() const override { return 0.0f; }
-    float get_maintenance_rate() const override { return simulation_config::monod::m_inactiv; }
+    double is_active_for_monod() const override { return 0.0; }
+    double get_maintenance_rate() const override { return simulation_config::monod::m_inactiv; }
 
     // Применяет коэффициенты дормантности (устойчивость/возраст/расход пищи)
     // к уже скопированному общему состоянию клетки. Вызывается сразу после
@@ -80,7 +82,7 @@ public:
 
     // Обратные величины для восстановления "обычных" параметров клетки
     // при переходе nonactive -> active.
-    float baseline_resistance() const;
+    double baseline_resistance() const;
     int baseline_max_age() const;
 };
 
@@ -90,8 +92,8 @@ private:
 public:
     int count_of_steps_from_death = 0;
     
-    float is_active_for_monod() const override { return 0.0f; }
-    float get_maintenance_rate() const override { return 0.0f; }
+    double is_active_for_monod() const override { return 0.0; }
+    double get_maintenance_rate() const override { return 0.0; }
     
     void step_after_death() override;
     bool should_be_removed_from_field() const override;

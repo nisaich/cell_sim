@@ -7,8 +7,8 @@
 Cell::Cell(
     int x,
     int y,
-    float start_food,
-    float start_antibiotic
+    double start_food,
+    double start_antibiotic
 )
     : cell_coordinates{ x, y },
     food(start_food),
@@ -30,7 +30,7 @@ void Cell::remove_cell() {
     cell = nullptr;
 }
 
-std::pair<float, float> Cell::situation_in_the_environment() const {
+std::pair<double, double> Cell::situation_in_the_environment() const {
     return {
         food.get_amount(),
         antibiotic.get_concentration()
@@ -61,20 +61,21 @@ const Antibiotic& Cell::get_antibiotic() const {
 Field::Field(int width, int height)
     : width(width),
     height(height),
-    field(height) {
+    field(height* width),
+    temp_grid(height* width, 0.0),
+    food_grid(height* width, 0.0),
+    antibiotic_grid(height* width, 0.0) {
     for (int y = 0; y < height; ++y) {
-        field[y].reserve(width);
         for (int x = 0; x < width; ++x) {
-            field[y].emplace_back(x, y);
+            field[y * width + x] = Cell(x, y);
         }
     }
 }
 
-void Field::init_environment(float initial_food) {
+void Field::init_environment(double initial_food) {
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
             get_nucleus(x, y).get_food().set_amount(initial_food);
-            get_nucleus(x, y).get_antibiotic().set_concentration(0.0f);
         }
     }
 }
@@ -85,63 +86,136 @@ void Field::add_some_food(int count_of_adding_food) {
     get_nucleus(center, 0).get_food().add(count_of_adding_food);
 }
 
-void Field::add_antibiotic(float concentration, int x, int y) {
-    if (is_x_inside(x) && is_y_inside(y)) {
-        get_nucleus(x, y).get_antibiotic().add(concentration);
+void Field::add_antibiotic(double concentration) {
+    for (int x = 0; x < width; x++) {  //добавляем только по самой верхней строчке, так и должно быть
+        get_nucleus(x, 0).get_antibiotic().add(concentration);
     }
 }
 
-void Field::diffuse_food() {
-    std::vector<std::vector<float>> new_food(height, std::vector<float>(width, 0.0f));
+static void diffuse_grid_adi(std::vector<double>& grid, std::vector<double>& temp, int width, int height, double D, double dt, double decay_rate = 0.0) {
+    if (height == 0 || width == 0) return;
 
-#pragma omp parallel for collapse(2) schedule(static)
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            float current = get_nucleus(x, y).get_food().get_amount();
-            float sum_neighbors = 0.0f;
-            for (Cell* nb : get_neighbours(x, y)) {
-                sum_neighbors += nb->get_food().get_amount();
+    double r = D * dt / 2.0;
+    if (r <= 0.0) return;
+
+    // Предвычисление c_prime по ширине (X)
+    std::vector<double> c_prime_x(width);
+    c_prime_x[0] = -r / (1.0 + r);
+    for (int i = 1; i < width - 1; ++i) {
+        double denom = (1.0 + 2.0 * r) + r * c_prime_x[i - 1];
+        c_prime_x[i] = -r / denom;
+    }
+
+    // Предвычисление c_prime по высоте (Y)
+    std::vector<double> c_prime_y(height);
+    c_prime_y[0] = -r / (1.0 + r);
+    for (int j = 1; j < height - 1; ++j) {
+        double denom = (1.0 + 2.0 * r) + r * c_prime_y[j - 1];
+        c_prime_y[j] = -r / denom;
+    }
+
+    // 1. ПЕРВЫЙ ПОЛУШАГ: Неявный по X, явный по Y
+#pragma omp parallel
+    {
+        double d_prime[512];
+        double d[512];
+#pragma omp for schedule(static)
+        for (int j = 0; j < height; ++j) {
+            for (int i = 0; i < width; ++i) {
+                double val_self = grid[j * width + i];
+                double val_up = (j > 0) ? grid[(j - 1) * width + i] : val_self;
+                double val_down = (j < height - 1) ? grid[(j + 1) * width + i] : val_self;
+
+                d[i] = val_self + r * (val_up - 2.0 * val_self + val_down);
             }
-            float num_neighbors = static_cast<float>(get_neighbours(x, y).size());
-            float new_val = current + simulation_config::field::food_diffusion_coeff *
-                (sum_neighbors - num_neighbors * current);
-            if (new_val < 0.0f) new_val = 0.0f;
-            new_food[y][x] = new_val;
+
+            d_prime[0] = d[0] / (1.0 + r);
+            for (int i = 1; i < width - 1; ++i) {
+                double denom = (1.0 + 2.0 * r) + r * c_prime_x[i - 1];
+                d_prime[i] = (d[i] + r * d_prime[i - 1]) / denom;
+            }
+            double denom_last = (1.0 + r) + r * c_prime_x[width - 2];
+            double d_prime_last = (d[width - 1] + r * d_prime[width - 2]) / denom_last;
+
+            temp[j * width + width - 1] = d_prime_last;
+            for (int i = width - 2; i >= 0; --i) {
+                temp[j * width + i] = d_prime[i] - c_prime_x[i] * temp[j * width + i + 1];
+            }
         }
     }
 
-#pragma omp parallel for collapse(2) schedule(static)
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            get_nucleus(x, y).get_food().set_amount(new_food[y][x]);
+    // 2. ВТОРОЙ ПОЛУШАГ: Явный по X, неявный по Y
+#pragma omp parallel
+    {
+        double d_prime[512];
+        double d[512];
+#pragma omp for schedule(static)
+        for (int i = 0; i < width; ++i) {
+            for (int j = 0; j < height; ++j) {
+                double val_self = temp[j * width + i];
+                double val_left = (i > 0) ? temp[j * width + i - 1] : val_self;
+                double val_right = (i < width - 1) ? temp[j * width + i + 1] : val_self;
+
+                d[j] = val_self + r * (val_left - 2.0 * val_self + val_right);
+            }
+
+            d_prime[0] = d[0] / (1.0 + r);
+            for (int j = 1; j < height - 1; ++j) {
+                double denom = (1.0 + 2.0 * r) + r * c_prime_y[j - 1];
+                d_prime[j] = (d[j] + r * d_prime[j - 1]) / denom;
+            }
+            double denom_last = (1.0 + r) + r * c_prime_y[height - 2];
+            double d_prime_last = (d[height - 1] + r * d_prime[height - 2]) / denom_last;
+
+            grid[(height - 1) * width + i] = d_prime_last;
+            for (int j = height - 2; j >= 0; --j) {
+                grid[j * width + i] = d_prime[j] - c_prime_y[j] * grid[(j + 1) * width + i];
+            }
+        }
+    }
+
+    // Применение коэффициента деградации и ограничение неотрицательности
+    if (decay_rate > 0.0) {
+        double decay_factor = 1.0 - decay_rate;
+#pragma omp parallel for schedule(static)
+        for (int i = 0; i < height * width; ++i) {
+            grid[i] *= decay_factor;
+            if (grid[i] < 0.0) grid[i] = 0.0;
+        }
+    }
+    else {
+#pragma omp parallel for schedule(static)
+        for (int i = 0; i < height * width; ++i) {
+            if (grid[i] < 0.0) grid[i] = 0.0;
         }
     }
 }
 
-void Field::diffuse_antibiotic() {
-    std::vector<std::vector<float>> new_antibiotic(height, std::vector<float>(width, 0.0f));
-
+void Field::diffuse_all() {
 #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            float current = get_nucleus(x, y).get_antibiotic().get_concentration();
-            float sum_neighbors = 0.0f;
-            for (Cell* nb : get_neighbours(x, y)) {
-                sum_neighbors += nb->get_antibiotic().get_concentration();
-            }
-            float num_neighbors = static_cast<float>(get_neighbours(x, y).size());
-            float new_val = current + simulation_config::antibiotic::diffusion_coeff *
-                (sum_neighbors - num_neighbors * current);
-            new_val *= (1.0f - simulation_config::antibiotic::decay_rate);
-            if (new_val < 0.0f) new_val = 0.0f;
-            new_antibiotic[y][x] = new_val;
+            int idx = y * width + x;
+            food_grid[idx] = field[idx].get_food().get_amount();
+            antibiotic_grid[idx] = field[idx].get_antibiotic().get_concentration();
         }
     }
 
+    diffuse_grid_adi(food_grid, temp_grid, width, height,
+        simulation_config::field::food_diffusion_coeff,
+        simulation_config::monod::delta_t);
+
+    diffuse_grid_adi(antibiotic_grid, temp_grid, width, height,
+        simulation_config::antibiotic::diffusion_coeff,
+        simulation_config::monod::delta_t,
+        simulation_config::antibiotic::decay_rate);
+
 #pragma omp parallel for collapse(2) schedule(static)
     for (int y = 0; y < height; ++y) {
         for (int x = 0; x < width; ++x) {
-            get_nucleus(x, y).get_antibiotic().set_concentration(new_antibiotic[y][x]);
+            int idx = y * width + x;
+            field[idx].get_food().set_amount(food_grid[idx]);
+            field[idx].get_antibiotic().set_concentration(antibiotic_grid[idx]);
         }
     }
 }
@@ -163,11 +237,11 @@ int Field::get_height() const {
 }
 
 Cell& Field::get_nucleus(int x, int y) {
-    return field[y][x];
+    return field[y * width + x];
 }
 
 const Cell& Field::get_nucleus(int x, int y) const {
-    return field[y][x];
+    return field[y * width + x];
 }
 
 std::vector<Cell*> Field::get_neighbours(int x, int y) {
@@ -204,6 +278,39 @@ std::vector<Cell*> Field::get_free_neighbours(int x, int y) {
     return free_neighbours;
 }
 
+std::vector<Cell*> Field::get_moore_neighbours(int x, int y) {
+    std::vector<Cell*> neighbours;
+
+    const std::array<std::pair<int, int>, 8> directions = {
+        std::pair<int, int>{-1, -1}, std::pair<int, int>{0, -1}, std::pair<int, int>{1, -1},
+        std::pair<int, int>{-1,  0},                             std::pair<int, int>{1,  0},
+        std::pair<int, int>{-1,  1}, std::pair<int, int>{0,  1}, std::pair<int, int>{1,  1}
+    };
+
+    for (const auto& direction : directions) {
+        int neighbour_x = x + direction.first;
+        int neighbour_y = y + direction.second;
+
+        if (is_x_inside(neighbour_x) && is_y_inside(neighbour_y)) {
+            neighbours.push_back(&get_nucleus(neighbour_x, neighbour_y));
+        }
+    }
+
+    return neighbours;
+}
+
+std::vector<Cell*> Field::get_free_moore_neighbours(int x, int y) {
+    std::vector<Cell*> free_neighbours;
+
+    for (Cell* neighbour : get_moore_neighbours(x, y)) {
+        if (neighbour->is_this_nucleus_free()) {
+            free_neighbours.push_back(neighbour);
+        }
+    }
+
+    return free_neighbours;
+}
+
 bool Field::place_cell(int x, int y, std::shared_ptr<abstract_Biomass> cell) {
     if (!is_x_inside(x) || !is_y_inside(y)) {
         return false;
@@ -215,19 +322,26 @@ bool Field::place_cell(int x, int y, std::shared_ptr<abstract_Biomass> cell) {
         return false;
     }
 
-    nucleus.set_cell(std::move(cell));
+    nucleus.set_cell(cell);
+
+    if (cell != nullptr) {
+        if (cell->is_alive()) {
+            active_cells.emplace_back(x, y);
+        }
+        else {
+            dead_cells.emplace_back(x, y);
+        }
+    }
 
     return true;
 }
 
 bool Field::has_living_cells() const {
-    for (const auto& row : field) {
-        for (const Cell& nucleus : row) {
-            std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
+    for (const Cell& nucleus : field) {
+        std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
-            if (cell != nullptr && cell->is_alive()) {
-                return true;
-            }
+        if (cell != nullptr && cell->is_alive()) {
+            return true;
         }
     }
 
@@ -235,20 +349,13 @@ bool Field::has_living_cells() const {
 }
 
 void Field::process_dead_cells_disappearance() {
-#pragma omp parallel for collapse(2) schedule(static)
-    for (int y = 0; y < height; ++y) {
-        for (int x = 0; x < width; ++x) {
-            Cell& nucleus = get_nucleus(x, y);
-            std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
+#pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < dead_cells.size(); ++i) {
+        const auto& pos = dead_cells[i];
+        Cell& nucleus = get_nucleus(pos.first, pos.second);
+        std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
-            if (cell == nullptr) {
-                continue;
-            }
-
-            if (cell->is_alive()) {
-                continue;
-            }
-
+        if (cell != nullptr && !cell->is_alive()) {
             cell->step_after_death();
 
             if (cell->should_be_removed_from_field()) {
@@ -261,44 +368,30 @@ void Field::process_dead_cells_disappearance() {
 void Field::make_one_step(int number_of_step) {
     // Диффузия
     if (number_of_step % simulation_config::visualization::number_of_step_to_diffuse == 0) {
-        diffuse_food();
-        diffuse_antibiotic();
+        diffuse_all();
     }
 
     // Добавление пищи (точечное)
     if (number_of_step % simulation_config::field::steps_for_adding_food == 0) {
         add_some_food(simulation_config::field::count_of_adding_food);
-    }
 
-    // Добавление антибиотика
-    if (number_of_step % simulation_config::antibiotic::adding_interval == 0) {
-        add_antibiotic(
-            simulation_config::antibiotic::adding_concentration,
-            width / 2,
-            0
-        );
-    }
-
-    std::vector<std::pair<int, int>> cells_for_this_step;
-
-#pragma omp parallel
-    {
-        std::vector<std::pair<int, int>> local_cells;
-#pragma omp for collapse(2) schedule(static)
+        // Добавление антибиотика
+        double sum_antibiotic = 0.0;
+#pragma omp parallel for reduction(+:sum_antibiotic) collapse(2) schedule(static)
         for (int y = 0; y < height; ++y) {
             for (int x = 0; x < width; ++x) {
-                std::shared_ptr<abstract_Biomass> cell = field[y][x].get_cell();
-
-                if (cell != nullptr && cell->is_alive()) {
-                    local_cells.emplace_back(x, y);
-                }
+                sum_antibiotic += get_nucleus(x, y).get_antibiotic().get_concentration();
             }
         }
-#pragma omp critical
-        {
-            cells_for_this_step.insert(cells_for_this_step.end(), local_cells.begin(), local_cells.end());
+        double avg_antibiotic = sum_antibiotic / (width * height);
+
+        if (avg_antibiotic < middle_value_of_antibiotic) {
+            add_antibiotic(concentration);
+            concentration += concetration_for_next_step;
         }
     }
+
+    cells_for_this_step = active_cells;
 
     // Проверка смерти
 #pragma omp parallel for schedule(static)
@@ -311,7 +404,7 @@ void Field::make_one_step(int number_of_step) {
             continue;
         }
 
-        if (cell->must_he_die(nucleus.get_food(), nucleus.get_antibiotic())) {
+        if (cell->must_he_die(*this, position.first, position.second)) {
             nucleus.set_cell(std::make_shared<dead_Biomass>());
         }
         else {
@@ -340,9 +433,37 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
+    // Фильтруем active_cells на месте (убираем те, что умерли, и перемещаем их в dead_cells)
+    size_t write_idx = 0;
+    for (size_t read_idx = 0; read_idx < active_cells.size(); ++read_idx) {
+        const auto& pos = active_cells[read_idx];
+        auto cell = get_nucleus(pos.first, pos.second).get_cell();
+        if (cell != nullptr) {
+            if (cell->is_alive()) {
+                active_cells[write_idx++] = pos;
+            }
+            else {
+                dead_cells.push_back(pos);
+            }
+        }
+    }
+    active_cells.resize(write_idx);
+
+    // Обрабатываем растворение мертвых клеток
     process_dead_cells_disappearance();
+
+    // Фильтруем dead_cells на месте (убираем те, что полностью исчезли)
+    size_t write_dead_idx = 0;
+    for (size_t read_idx = 0; read_idx < dead_cells.size(); ++read_idx) {
+        const auto& pos = dead_cells[read_idx];
+        auto cell = get_nucleus(pos.first, pos.second).get_cell();
+        if (cell != nullptr && !cell->is_alive()) {
+            dead_cells[write_dead_idx++] = pos;
+        }
+    }
+    dead_cells.resize(write_dead_idx);
 }
 
-const std::vector<std::vector<Cell>>& Field::get_field() const {
+const std::vector<Cell>& Field::get_field() const {
     return field;
 }

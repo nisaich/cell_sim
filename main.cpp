@@ -3,7 +3,9 @@
 #include "SimulationConfig.hpp"
 #include "visualization.hpp"
 
+#include <algorithm>
 #include <memory>
+#include <vector>
 
 int main() {
     const int width = simulation_config::field::width;
@@ -12,21 +14,19 @@ int main() {
     Field simulation_field(width, height);
     simulation_field.init_environment(simulation_config::field::initial_food);
 
-    // ---- 40 КЛЕТОК В ЦЕНТРЕ НИЖНЕЙ СТРОКИ ----
+    // ---- ОДИНОЧНЫЕ ОЧАГИ ВДОЛЬ НИЖНЕЙ ГРАНИЦЫ ----
     const int y = height - 1;
-    const int cells_count = 40;
-    const int start_x = (width - cells_count) / 2;
+    const int groups = 6;                // меньше очагов, чтобы не сливались
+    const int spacing = width / (groups + 1);
 
-    for (int x = start_x; x < start_x + cells_count; ++x) {
-        simulation_field.place_cell(
-            x,
-            y,
-            std::make_shared<active_Biomass>()
-        );
+    for (int g = 1; g <= groups; ++g) {
+        int x = g * spacing;
+        x = std::clamp(x, 0, width - 1);
+        simulation_field.place_cell(x, y, std::make_shared<active_Biomass>());
+        // Можно добавить по второй клетке рядом, но оставляем одиночные для максимального ветвления
     }
-    // -----------------------------------------
+    // -------------------------------------------------
 
-    visualize(simulation_field, simulation_config::visualization::default_color_mode);
-
+    visualize(simulation_field);
     return 0;
 }

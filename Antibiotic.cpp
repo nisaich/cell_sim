@@ -1,30 +1,30 @@
 #include "Antibiotic.hpp"
 
-Antibiotic::Antibiotic(float start_concentration)
+Antibiotic::Antibiotic(double start_concentration)
     : concentration(start_concentration) {}
 
-float Antibiotic::get_concentration() const {
+double Antibiotic::get_concentration() const {
     return concentration;
 }
 
-void Antibiotic::set_concentration(float value) {
-    concentration = (value >= 0.0f) ? value : 0.0f;
+void Antibiotic::set_concentration(double value) {
+    concentration = (value >= 0.0) ? value : 0.0;
 }
 
-void Antibiotic::add(float value) {
-    if (value > 0.0f) {
+void Antibiotic::add(double value) {
+    if (value > 0.0) {
         concentration += value;
     }
 }
 
-void Antibiotic::decrease(float value) {
-    if (value <= 0.0f) {
+void Antibiotic::decrease(double value) {
+    if (value <= 0.0) {
         return;
     }
 
     concentration -= value;
 
-    if (concentration < 0.0f) {
-        concentration = 0.0f;
+    if (concentration < 0.0) {
+        concentration = 0.0;
     }
 }

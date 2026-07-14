@@ -11,12 +11,47 @@
 #include <memory>
 #include <string>
 #include <cctype>
+#include <chrono>
+#include <vector>
+#include <numeric>
+#include <iostream>
+#include <csignal>
+#include <cstdlib>
+
+namespace {
+    std::chrono::high_resolution_clock::time_point start_simulation_time;
+    long long total_ticks_counter = 0;
+
+    void print_average_tick_time() {
+        auto end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> total_duration = end_time - start_simulation_time;
+        double elapsed_seconds = total_duration.count();
+
+        std::cout << "\n--- Simulation Performance Statistics ---" << std::endl;
+        std::cout << "Total elapsed time: " << elapsed_seconds << " seconds" << std::endl;
+        std::cout << "Total simulation ticks: " << total_ticks_counter << std::endl;
+        if (total_ticks_counter > 0 && elapsed_seconds > 0.0) {
+            double avg_ms = (elapsed_seconds / total_ticks_counter) * 1000.0;
+            double ticks_per_sec = total_ticks_counter / elapsed_seconds;
+            std::cout << "Average time per tick (end-to-end): " << avg_ms << " ms" << std::endl;
+            std::cout << "Effective tick rate: " << ticks_per_sec << " ticks/second" << std::endl;
+        }
+        else {
+            std::cout << "No simulation ticks calculated yet." << std::endl;
+        }
+    }
+
+    void sigint_handler(int signal) {
+        print_average_tick_time();
+        std::exit(signal);
+    }
+}
 
 enum class CellColorMode {
     Age,
     Resistance,
     Nutrition,
-    Antibiotic   // новый режим
+    Antibiotic
 };
 
 enum class CellShapeMode {
@@ -26,9 +61,9 @@ enum class CellShapeMode {
 class VisualizationCell {
 protected:
     std::shared_ptr<abstract_Biomass> cell;
-    float nutrition;
-    float antibiotic;
-    float resistance;
+    double nutrition;
+    double antibiotic;
+    double resistance;
     int state_nucleus;
     int age;
     int max_age;
@@ -36,9 +71,9 @@ protected:
 public:
     VisualizationCell(
         const std::shared_ptr<abstract_Biomass>& cell,
-        float nutrition,
-        float antibiotic,
-        float resistance
+        double nutrition,
+        double antibiotic,
+        double resistance
     )
         : cell(cell),
         nutrition(nutrition),
@@ -71,15 +106,15 @@ public:
 
     virtual Color getColor() const = 0;
 
-    float getNutrition() const {
+    double getNutrition() const {
         return nutrition;
     }
 
-    float getAntibiotic() const {
+    double getAntibiotic() const {
         return antibiotic;
     }
 
-    float getResistance() const {
+    double getResistance() const {
         return resistance;
     }
 
@@ -128,8 +163,8 @@ protected:
         }
     }
 
-    Color applyBrightness(Color color, float brightness) const {
-        brightness = std::clamp(brightness, 0.0f, 1.0f);
+    Color applyBrightness(Color color, double brightness) const {
+        brightness = std::clamp(brightness, 0.0, 1.0);
         return Color{
             static_cast<unsigned char>(color.r * brightness),
             static_cast<unsigned char>(color.g * brightness),
@@ -143,9 +178,9 @@ class AgeColorCell : public VisualizationCell {
 public:
     AgeColorCell(
         const std::shared_ptr<abstract_Biomass>& cell,
-        float nutrition,
-        float antibiotic,
-        float resistance
+        double nutrition,
+        double antibiotic,
+        double resistance
     )
         : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
@@ -154,18 +189,18 @@ public:
         if (cell == nullptr || !cell->is_alive()) {
             return baseColor;
         }
-        float brightness = getBrightnessByAge();
+        double brightness = getBrightnessByAge();
         return applyBrightness(baseColor, brightness);
     }
 
 private:
-    float getBrightnessByAge() const {
-        if (max_age == 0) return 1.0f;
-        float ageRatio = static_cast<float>(age) / static_cast<float>(max_age);
-        ageRatio = std::clamp(ageRatio, 0.0f, 1.0f);
+    double getBrightnessByAge() const {
+        if (max_age == 0) return 1.0;
+        double ageRatio = static_cast<double>(age) / static_cast<double>(max_age);
+        ageRatio = std::clamp(ageRatio, 0.0, 1.0);
         ageRatio = std::sqrt(ageRatio);
         return simulation_config::visualization::min_brightness +
-            (1.0f - ageRatio) * simulation_config::visualization::brightness_span;
+            (1.0 - ageRatio) * simulation_config::visualization::brightness_span;
     }
 };
 
@@ -173,9 +208,9 @@ class ResistanceColorCell : public VisualizationCell {
 public:
     ResistanceColorCell(
         const std::shared_ptr<abstract_Biomass>& cell,
-        float nutrition,
-        float antibiotic,
-        float resistance
+        double nutrition,
+        double antibiotic,
+        double resistance
     )
         : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
@@ -184,7 +219,7 @@ public:
         if (cell == nullptr || !cell->is_alive()) {
             return baseColor;
         }
-        float brightness = simulation_config::visualization::min_brightness +
+        double brightness = simulation_config::visualization::min_brightness +
             resistance * simulation_config::visualization::brightness_span;
         return applyBrightness(baseColor, brightness);
     }
@@ -194,9 +229,9 @@ class NutritionColorCell : public VisualizationCell {
 public:
     NutritionColorCell(
         const std::shared_ptr<abstract_Biomass>& cell,
-        float nutrition,
-        float antibiotic,
-        float resistance
+        double nutrition,
+        double antibiotic,
+        double resistance
     )
         : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
@@ -217,83 +252,67 @@ public:
             return getBaseColor();
         }
 
-        float biomass_ratio = std::clamp(
+        double biomass_ratio = std::clamp(
             cell->get_biomass() / simulation_config::biomass::reproduction_min_biomass,
-            0.0f,
-            1.0f
+            0.0,
+            1.0
         );
-        float brightness = simulation_config::visualization::min_brightness +
+        double brightness = simulation_config::visualization::min_brightness +
             biomass_ratio * simulation_config::visualization::brightness_span;
         return applyBrightness(getBaseColor(), brightness);
     }
 };
 
-// ---------- НОВЫЙ КЛАСС ДЛЯ АНТИБИОТИКА ----------
 class AntibioticColorCell : public VisualizationCell {
 public:
     AntibioticColorCell(
         const std::shared_ptr<abstract_Biomass>& cell,
-        float nutrition,
-        float antibiotic,
-        float resistance
+        double nutrition,
+        double antibiotic,
+        double resistance
     )
         : VisualizationCell(cell, nutrition, antibiotic, resistance) {}
 
     Color getColor() const override {
-        // Если клетка живая или мёртвая, показываем её цвет, но с наложением яркости от антибиотика
         if (cell != nullptr) {
             Color base = getBaseColor();
-            // Яркость зависит от концентрации антибиотика (нормируем)
-            float conc = std::clamp(
+            double conc = std::clamp(
                 antibiotic / simulation_config::antibiotic::visualization_normalizer,
-                0.0f,
-                1.0f
+                0.0,
+                1.0
             );
-            // Для живых клеток делаем цвет тусклее при высоком антибиотике (стресс)
-            float brightness = 1.0f - conc * 0.7f;  // от 1.0 до 0.3
-            brightness = std::clamp(brightness, 0.3f, 1.0f);
+            double brightness = 1.0 - conc * 0.7;
+            brightness = std::clamp(brightness, 0.3, 1.0);
             return applyBrightness(base, brightness);
         }
         else {
-            // Пустая клетка – показываем концентрацию антибиотика в синих тонах
-            float conc = std::clamp(
+            double conc = std::clamp(
                 antibiotic / simulation_config::antibiotic::visualization_normalizer,
-                0.0f,
-                1.0f
+                0.0,
+                1.0
             );
-            // От чёрного (0) до ярко-синего (1)
             unsigned char intensity = static_cast<unsigned char>(conc * 255);
             return Color{ 0, 0, intensity, 255 };
         }
     }
 };
-// --------------------------------------------------
 
 class VisualizationBiomass {
 private:
     std::string shape;
-    float sizeX;
-    float sizeY;
-    CellColorMode colorMode;
 
 public:
-    VisualizationBiomass(
-        const std::string& shape,
-        float sizeX,
-        float sizeY,
-        CellColorMode colorMode
-    )
-        : shape(shape),
-        sizeX(sizeX),
-        sizeY(sizeY),
-        colorMode(colorMode) {}
+    explicit VisualizationBiomass(const std::string& shape)
+        : shape(shape) {}
 
     void draw(
         int width,
         int height,
-        const std::vector<std::vector<Cell>>& field,
+        const std::vector<Cell>& field,
         float startX,
-        float startY
+        float startY,
+        float cellSize,
+        CellColorMode colorMode
     ) const {
         if (shape != "square") {
             return;
@@ -301,46 +320,42 @@ public:
 
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                const Cell& nucleus = field[y][x];
+                const Cell& nucleus = field[y * width + x];
 
-                float drawX = startX + x * sizeX;
-                float drawY = startY + y * sizeY;
+                float drawX = startX + x * cellSize;
+                float drawY = startY + y * cellSize;
 
-                Color color = getCellColor(nucleus);
+                Color color = getCellColor(nucleus, colorMode);
 
-                drawSquare(drawX, drawY, color);
+                DrawRectangleRec(
+                    Rectangle{ drawX, drawY, cellSize, cellSize },
+                    color
+                );
             }
         }
     }
 
 protected:
-    void drawSquare(float x, float y, Color color) const {
-        DrawRectangleRec(
-            Rectangle{ x, y, sizeX, sizeY },
-            color
-        );
-    }
-
-    Color getCellColor(const Cell& nucleus) const {
+    Color getCellColor(const Cell& nucleus, CellColorMode colorMode) const {
         std::shared_ptr<abstract_Biomass> cell = nucleus.get_cell();
 
         auto environment = nucleus.situation_in_the_environment();
 
-        float foodInEnvironment = environment.first;
-        float antibioticInEnvironment = environment.second;
+        double foodInEnvironment = environment.first;
+        double antibioticInEnvironment = environment.second;
 
-        float nutrition = std::clamp(
+        double nutrition = std::clamp(
             foodInEnvironment / simulation_config::visualization::modified_nutrition_normalizer,
-            0.0f,
-            1.0f
+            0.0,
+            1.0
         );
-        float antibiotic = std::clamp(
+        double antibiotic = std::clamp(
             antibioticInEnvironment,
-            0.0f,
+            0.0,
             simulation_config::antibiotic::visualization_normalizer
         );
 
-        float resistance = 0.0f;
+        double resistance = 0.0;
         if (cell != nullptr) {
             resistance = cell->get_level_of_resistance();
         }
@@ -368,31 +383,13 @@ protected:
     }
 };
 
-static CellColorMode getColorModeFromText(const std::string& colorMode) {
-    if (colorMode == "age") {
-        return CellColorMode::Age;
-    }
-    else if (colorMode == "resistance") {
-        return CellColorMode::Resistance;
-    }
-    else if (colorMode == "nutrition") {
-        return CellColorMode::Nutrition;
-    }
-    else if (colorMode == "antibiotic") {
-        return CellColorMode::Antibiotic;
-    }
-    return CellColorMode::Age;
-}
-
 static void drawAntibioticLegend(int x, int y) {
     const int barWidth = simulation_config::visualization::legend_width;
     const int barHeight = simulation_config::visualization::legend_height;
     const int fontSize = simulation_config::visualization::legend_font_size;
 
-    // Полупрозрачная подложка, чтобы легенда читалась над полем любого цвета
     DrawRectangle(x - 6, y - 6, barWidth + 90, barHeight + 20, Color{ 255, 255, 255, 180 });
 
-    // Градиент "чёрный (0) -> синий (max)", как у пустых клеток в этом режиме
     for (int i = 0; i < barHeight; ++i) {
         float t = 1.0f - static_cast<float>(i) / static_cast<float>(barHeight - 1);
         unsigned char intensity = static_cast<unsigned char>(t * 255);
@@ -401,126 +398,99 @@ static void drawAntibioticLegend(int x, int y) {
     DrawRectangleLines(x, y, barWidth, barHeight, GRAY);
 
     DrawText(
-        TextFormat("%.0f", simulation_config::antibiotic::visualization_normalizer),
+        TextFormat("%.2f", simulation_config::antibiotic::visualization_normalizer),
         x + barWidth + 6, y - 2, fontSize, DARKGRAY
     );
     DrawText("0", x + barWidth + 6, y + barHeight - fontSize + 2, fontSize, DARKGRAY);
     DrawText("Antibiotic", x, y + barHeight + 4, fontSize, DARKGRAY);
 }
 
-static float calculateBiomassSize(
-    int width,
-    int height,
-    int availableWidth,
-    int screenHeight
-) {
-    float cellSizeByWidth =
-        static_cast<float>(availableWidth) / static_cast<float>(width);
-    float cellSizeByHeight =
-        static_cast<float>(screenHeight) / static_cast<float>(height);
-    return std::min(cellSizeByWidth, cellSizeByHeight);
+static void drawPanelContainer(const char* title, int x, int y, int w, int h) {
+    DrawRectangle(x, y, w, h, RAYWHITE);
+    DrawRectangleLinesEx(Rectangle{ (float)x, (float)y, (float)w, (float)h }, 1.0f, LIGHTGRAY);
+    DrawRectangle(x, y, w, 24, Color{ 240, 240, 240, 255 });
+    DrawRectangleLinesEx(Rectangle{ (float)x, (float)y, (float)w, 24.0f }, 1.0f, LIGHTGRAY);
+    DrawText(title, x + 8, y + 5, 14, DARKGRAY);
 }
 
-void visualize(
-    Field& simulation_field,
-    const std::string& colorMode) {
+void visualize(Field& simulation_field) {
+    std::signal(SIGINT, sigint_handler);
 
     int width = simulation_field.get_width();
     int height = simulation_field.get_height();
 
-    InitWindow(
-        simulation_config::visualization::initial_window_width,
-        simulation_config::visualization::initial_window_height,
-        "Biomass visualization"
-    );
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    InitWindow(1200, 900, "Antibiotic Visualization");
 
     int monitor = GetCurrentMonitor();
-    const int graphPanelWidth = simulation_config::visualization::graph_panel_width;
-    const int contentGap = simulation_config::visualization::modified_content_gap;
-
-    int maxScreenWidth = GetMonitorWidth(monitor) -
-        simulation_config::visualization::modified_window_screen_margin;
-    int maxScreenHeight = GetMonitorHeight(monitor) -
-        simulation_config::visualization::modified_window_screen_margin;
-
-    float cellSize = calculateBiomassSize(
-        width,
-        height,
-        maxScreenWidth - graphPanelWidth - contentGap,
-        maxScreenHeight
-    );
-
-    int windowWidth = static_cast<int>(width * cellSize) + graphPanelWidth + contentGap;
-    int windowHeight = static_cast<int>(height * cellSize);
-
-    SetWindowSize(windowWidth, windowHeight);
-
-    int windowPosX = (GetMonitorWidth(monitor) - windowWidth) / 2;
-    int windowPosY = (GetMonitorHeight(monitor) - windowHeight) / 2;
+    int windowPosX = (GetMonitorWidth(monitor) - 1200) / 2;
+    int windowPosY = (GetMonitorHeight(monitor) - 900) / 2;
     SetWindowPosition(windowPosX, windowPosY);
 
     SetTargetFPS(simulation_config::visualization::target_fps);
 
-    float startX = 0.0f;
-    float startY = 0.0f;
+    VisualizationBiomass visualizationBiomass("square");
 
-    CellColorMode mode = getColorModeFromText(colorMode);
-
-    VisualizationBiomass visualizationBiomass(
-        "square",
-        cellSize,
-        cellSize,
-        mode
-    );
-    const std::string statsPath = "simulation_stats.csv";
-    CsvStatsRecorder statsRecorder(statsPath);
-    StatsHistory statsHistory;
     int tick = 0;
 
+    // Запись CSV (раскомментировано)
+    CsvStatsRecorder statsRecorder("simulation_stats.csv");
     if (statsRecorder.is_open()) {
         statsRecorder.record(simulation_field, tick);
     }
-    statsHistory.record(simulation_field, tick);
+
+    start_simulation_time = std::chrono::high_resolution_clock::now();
+    total_ticks_counter = 0;
 
     while (!WindowShouldClose()) {
-        if (simulation_field.has_living_cells()) {
-            simulation_field.make_one_step(tick);
-            ++tick;
-
-            if (statsRecorder.is_open()) {
-                statsRecorder.record(simulation_field, tick);
+        for (int i = 0; i < simulation_config::visualization::steps_per_frame; ++i) {
+            if (simulation_field.has_living_cells()) {
+                simulation_field.make_one_step(tick);
+                ++tick;
+                ++total_ticks_counter;
             }
-            statsHistory.record(simulation_field, tick);
+            else {
+                break;
+            }
         }
+
+        if (statsRecorder.is_open()) {
+            statsRecorder.record(simulation_field, tick);
+        }
+
+        int screenWidth = GetScreenWidth();
+        int screenHeight = GetScreenHeight();
+
+        int panelX = 10;
+        int panelY = 10;
+        int panelW = screenWidth - 20;
+        int panelH = screenHeight - 20;
 
         BeginDrawing();
+        ClearBackground(Color{ 220, 220, 220, 255 });
 
-        ClearBackground(RAYWHITE);
+        drawPanelContainer("Antibiotic Concentration", panelX, panelY, panelW, panelH);
+
+        float cellSize = std::min(
+            (float)(panelW - 16) / width,
+            (float)(panelH - 24 - 16) / height
+        );
+        float startX = panelX + 8.0f + (panelW - 16 - width * cellSize) / 2.0f;
+        float startY = panelY + 24.0f + 8.0f + (panelH - 24 - 16 - height * cellSize) / 2.0f;
 
         visualizationBiomass.draw(
-            width,
-            height,
+            width, height,
             simulation_field.get_field(),
-            startX,
-            startY
+            startX, startY,
+            cellSize,
+            CellColorMode::Antibiotic
         );
 
-        if (mode == CellColorMode::Antibiotic) {
-            drawAntibioticLegend(
-                simulation_config::visualization::legend_x,
-                simulation_config::visualization::legend_y
-            );
-        }
-
-        statsHistory.draw(
-            static_cast<int>(width * cellSize + contentGap),
-            0,
-            graphPanelWidth,
-            windowHeight
-        );
+        drawAntibioticLegend(panelX + 12, panelY + 36);
 
         EndDrawing();
     }
 
     CloseWindow();
+    print_average_tick_time();
 }

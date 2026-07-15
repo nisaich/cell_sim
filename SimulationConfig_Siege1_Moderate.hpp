@@ -62,13 +62,13 @@ namespace simulation_config {
         inline constexpr double dispersion_chance  = 0.001;
         inline constexpr int    dispersion_radius  = 10;
 
-        inline constexpr int    max_count_reps     = 10000;
         inline constexpr double initial_biomass    = 0.5;
         inline constexpr double max_biomass        = 1.0;
         inline constexpr double child_biomass_ratio      = 0.5;
 
         // При F=2000 клетки достигают 0.7 за ~160 тиков — достижимо
         inline constexpr double reproduction_min_biomass = 0.7;
+        inline constexpr double reproduction_chance      = 0.5;
 
         // 2 дня — 2880 тиков (60 сек/тик)
         inline constexpr int    default_max_age    = 2880;
@@ -151,27 +151,5 @@ namespace simulation_config {
         inline constexpr unsigned char dead_cell_g = 128;
         inline constexpr unsigned char dead_cell_b = 128;
 
-        inline constexpr int legend_x      = 10;
-        inline constexpr int legend_y      = 10;
-        inline constexpr int legend_width  = 18;
-        inline constexpr int legend_height = 18;
-
-        inline constexpr int legend_font_size = 15;
-    }
-
-    namespace graphs {
-        inline constexpr double chart_roundness        = 0.05;
-        inline constexpr int    chart_round_segments   = 4;
-        inline constexpr double chart_outline_thickness = 1.0;
-        inline constexpr double chart_line_thickness   = 1.5;
-        inline constexpr double chart_span_epsilon     = 1e-6;
-        inline constexpr double chart_min_span         = 1.0;
-        inline constexpr int    text_font_size         = 12;
-        inline constexpr int    title_font_size        = 14;
-        inline constexpr int    max_displayed_points   = 300;
-
-        inline constexpr int panel_padding  = 12;
-        inline constexpr int header_bottom  = 160;
-        inline constexpr int section_gap    = 8;
     }
 }

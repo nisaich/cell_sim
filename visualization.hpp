@@ -5,5 +5,7 @@
 #include <string>
 
 void visualize(
-    Field& simulation_field
+    Field& simulation_field,
+    int argc,
+    char* argv[]
 );

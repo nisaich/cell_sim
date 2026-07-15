@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-int main() {
+int main(int argc, char* argv[]) {
     const int width = simulation_config::field::width;
     const int height = simulation_config::field::height;
 
@@ -33,7 +33,7 @@ int main() {
     }
     // -----------------------------------------------------
 
-    visualize(simulation_field);
+    visualize(simulation_field, argc, argv);
 
     return 0;
 }

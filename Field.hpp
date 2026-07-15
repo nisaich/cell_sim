@@ -58,8 +58,8 @@ private:
     void process_dead_cells_disappearance();
 
     double concetration_for_next_step = simulation_config::antibiotic::concetration_for_next_step;
-    double concentration = simulation_config::antibiotic::concetration_for_next_step;  //начальная концентрация, потом добавляем ещё
-    double middle_value_of_antibiotic = simulation_config::antibiotic::middle_value_of_antibiotic;  //посмотрите в файле конфига
+    double concentration = simulation_config::antibiotic::concetration_for_next_step;
+    double middle_value_of_antibiotic = simulation_config::antibiotic::middle_value_of_antibiotic;
 public:
     Field(int width, int height);
 
@@ -77,7 +77,7 @@ public:
     void add_some_food(
         int count_of_adding_food = simulation_config::field::count_of_adding_food
     );
-    void add_antibiotic(          // новый метод
+    void add_antibiotic(
         double concentration
     );
 
@@ -88,12 +88,6 @@ public:
 
     std::vector<Cell*> get_neighbours(int x, int y);
     std::vector<Cell*> get_free_neighbours(int x, int y);
-
-    // 8-связная (Мур) окрестность — нужна для ветвистого (дендритного) роста:
-    // позволяет клетке расти и по диагонали, давая более естественные углы веток,
-    // и используется для подсчёта "оголённости" кандидатной точки (см. Biomass.cpp).
-    std::vector<Cell*> get_moore_neighbours(int x, int y);
-    std::vector<Cell*> get_free_moore_neighbours(int x, int y);
 
     bool place_cell(int x, int y, std::shared_ptr<abstract_Biomass> cell);
 

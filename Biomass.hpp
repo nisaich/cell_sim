@@ -11,7 +11,6 @@ class abstract_Biomass {
     friend class Field;
 protected:
     int age_of_cell = 0;
-    int max_count_reps = simulation_config::biomass::max_count_reps;
     double biomass = simulation_config::biomass::initial_biomass;
     Cell* nucleus = nullptr;
     void copy_common_state_to(abstract_Biomass& other) const;
@@ -26,7 +25,6 @@ public:
     double get_level_of_resistance() const;
     double get_biomass() const;
 
-    // Теперь must_he_die принимает антибиотик
     bool must_he_die(Field& current_field, int x, int y) const;
     void increase_age();
     void set_nucleus(Cell* current_nucleus);
@@ -75,13 +73,8 @@ public:
     double is_active_for_monod() const override { return 0.0; }
     double get_maintenance_rate() const override { return simulation_config::monod::m_inactiv; }
 
-    // Применяет коэффициенты дормантности (устойчивость/возраст/расход пищи)
-    // к уже скопированному общему состоянию клетки. Вызывается сразу после
-    // copy_common_state_to при переходе active -> nonactive.
     void apply_dormancy_effects();
 
-    // Обратные величины для восстановления "обычных" параметров клетки
-    // при переходе nonactive -> active.
     double baseline_resistance() const;
     int baseline_max_age() const;
 };

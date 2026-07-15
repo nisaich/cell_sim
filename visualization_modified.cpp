@@ -15,8 +15,11 @@
 #include <vector>
 #include <numeric>
 #include <iostream>
-#include <csignal>
-#include <cstdlib>
+// #include <csignal>   // отключаем, т.к. не используем sigint_handler
+// #include <cstdlib>
+// #include <unistd.h>   // не используется в Windows
+// #include <sys/types.h>
+// #include <sys/wait.h> // уже закомментирован
 
 namespace {
     std::chrono::high_resolution_clock::time_point start_simulation_time;
@@ -41,10 +44,7 @@ namespace {
         }
     }
 
-    void sigint_handler(int signal) {
-        print_average_tick_time();
-        std::exit(signal);
-    }
+    // sigint_handler удалён – не используется
 }
 
 enum class CellColorMode {
@@ -263,6 +263,7 @@ public:
     }
 };
 
+// ---------- НОВЫЙ КЛАСС ДЛЯ АНТИБИОТИКА ----------
 class AntibioticColorCell : public VisualizationCell {
 public:
     AntibioticColorCell(
@@ -296,6 +297,7 @@ public:
         }
     }
 };
+// --------------------------------------------------
 
 class VisualizationBiomass {
 private:
@@ -350,9 +352,9 @@ protected:
             1.0
         );
         double antibiotic = std::clamp(
-            antibioticInEnvironment,
+            antibioticInEnvironment / simulation_config::antibiotic::visualization_normalizer,
             0.0,
-            simulation_config::antibiotic::visualization_normalizer
+            1.0
         );
 
         double resistance = 0.0;
@@ -383,58 +385,71 @@ protected:
     }
 };
 
-static void drawAntibioticLegend(int x, int y) {
-    const int barWidth = simulation_config::visualization::legend_width;
-    const int barHeight = simulation_config::visualization::legend_height;
-    const int fontSize = simulation_config::visualization::legend_font_size;
+// =========================================================================
+// ========== УПРОЩЁННАЯ ВЕРСИЯ ДЛЯ WINDOWS (без форков) =================
+// =========================================================================
+void visualize(
+    Field& simulation_field,
+    int argc,
+    char* argv[]) {
 
-    DrawRectangle(x - 6, y - 6, barWidth + 90, barHeight + 20, Color{ 255, 255, 255, 180 });
-
-    for (int i = 0; i < barHeight; ++i) {
-        float t = 1.0f - static_cast<float>(i) / static_cast<float>(barHeight - 1);
-        unsigned char intensity = static_cast<unsigned char>(t * 255);
-        DrawRectangle(x, y + i, barWidth, 1, Color{ 0, 0, intensity, 255 });
-    }
-    DrawRectangleLines(x, y, barWidth, barHeight, GRAY);
-
-    DrawText(
-        TextFormat("%.2f", simulation_config::antibiotic::visualization_normalizer),
-        x + barWidth + 6, y - 2, fontSize, DARKGRAY
-    );
-    DrawText("0", x + barWidth + 6, y + barHeight - fontSize + 2, fontSize, DARKGRAY);
-    DrawText("Antibiotic", x, y + barHeight + 4, fontSize, DARKGRAY);
-}
-
-static void drawPanelContainer(const char* title, int x, int y, int w, int h) {
-    DrawRectangle(x, y, w, h, RAYWHITE);
-    DrawRectangleLinesEx(Rectangle{ (float)x, (float)y, (float)w, (float)h }, 1.0f, LIGHTGRAY);
-    DrawRectangle(x, y, w, 24, Color{ 240, 240, 240, 255 });
-    DrawRectangleLinesEx(Rectangle{ (float)x, (float)y, (float)w, 24.0f }, 1.0f, LIGHTGRAY);
-    DrawText(title, x + 8, y + 5, 14, DARKGRAY);
-}
-
-void visualize(Field& simulation_field) {
+    // ========== ЗАКОММЕНТИРОВАН ВЕСЬ БЛОК С fork/execvp/kill/waitpid ==========
+    /*
     std::signal(SIGINT, sigint_handler);
 
+    std::string viewer_mode = "";
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--viewer" && i + 1 < argc) {
+            viewer_mode = argv[i + 1];
+            ++i;
+        }
+    }
+
+    if (!viewer_mode.empty()) {
+        runViewer(viewer_mode);
+        return;
+    }
+
+    unlink("/dev/shm/simulation_state.dat");
+    exportSharedState(simulation_field, 0, true);
+
+    pid_t pid1 = fork();
+    if (pid1 == 0) {
+        char* child_argv[] = { argv[0], (char*)"--viewer", (char*)"antibiotic", nullptr };
+        execvp(child_argv[0], child_argv);
+        std::exit(1);
+    }
+
+    pid_t pid2 = fork();
+    if (pid2 == 0) {
+        char* child_argv[] = { argv[0], (char*)"--viewer", (char*)"age", nullptr };
+        execvp(child_argv[0], child_argv);
+        std::exit(1);
+    }
+    */
+    // ========== КОНЕЦ ЗАКОММЕНТИРОВАННОГО БЛОКА ==========
+
+    // ========== ВМЕСТО ЭТОГО – ПРОСТОЙ ЦИКЛ С ОДНИМ ОКНОМ ==========
     int width = simulation_field.get_width();
     int height = simulation_field.get_height();
 
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    InitWindow(1200, 900, "Antibiotic Visualization");
+    float defaultCellSize = 4.0f;
+    int windowW = static_cast<int>(width * defaultCellSize + 16);
+    int windowH = static_cast<int>(height * defaultCellSize + 48);
 
-    int monitor = GetCurrentMonitor();
-    int windowPosX = (GetMonitorWidth(monitor) - 1200) / 2;
-    int windowPosY = (GetMonitorHeight(monitor) - 900) / 2;
-    SetWindowPosition(windowPosX, windowPosY);
+    std::string title = "Food Concentration (Nutrition)";
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    InitWindow(windowW, windowH, title.c_str());
 
     SetTargetFPS(simulation_config::visualization::target_fps);
 
-    VisualizationBiomass visualizationBiomass("square");
+    VisualizationBiomass visualizer("square");
 
+    const std::string statsPath = "simulation_stats.csv";
+    CsvStatsRecorder statsRecorder(statsPath);
     int tick = 0;
 
-    // Запись CSV (раскомментировано)
-    CsvStatsRecorder statsRecorder("simulation_stats.csv");
     if (statsRecorder.is_open()) {
         statsRecorder.record(simulation_field, tick);
     }
@@ -443,6 +458,8 @@ void visualize(Field& simulation_field) {
     total_ticks_counter = 0;
 
     while (!WindowShouldClose()) {
+        bool was_running = simulation_field.has_living_cells();
+
         for (int i = 0; i < simulation_config::visualization::steps_per_frame; ++i) {
             if (simulation_field.has_living_cells()) {
                 simulation_field.make_one_step(tick);
@@ -454,43 +471,51 @@ void visualize(Field& simulation_field) {
             }
         }
 
-        if (statsRecorder.is_open()) {
-            statsRecorder.record(simulation_field, tick);
+        if (was_running) {
+            if (statsRecorder.is_open()) {
+                statsRecorder.record(simulation_field, tick);
+            }
         }
 
         int screenWidth = GetScreenWidth();
         int screenHeight = GetScreenHeight();
 
-        int panelX = 10;
-        int panelY = 10;
-        int panelW = screenWidth - 20;
-        int panelH = screenHeight - 20;
-
         BeginDrawing();
-        ClearBackground(Color{ 220, 220, 220, 255 });
+        ClearBackground(RAYWHITE);
 
-        drawPanelContainer("Antibiotic Concentration", panelX, panelY, panelW, panelH);
+        // Получаем вектор ячеек напрямую из поля
+        std::vector<Cell> cells;
+        cells.reserve(width * height);
+        for (int y = 0; y < height; ++y) {
+            for (int x = 0; x < width; ++x) {
+                cells.push_back(simulation_field.get_nucleus(x, y));
+            }
+        }
 
-        float cellSize = std::min(
-            (float)(panelW - 16) / width,
-            (float)(panelH - 24 - 16) / height
-        );
-        float startX = panelX + 8.0f + (panelW - 16 - width * cellSize) / 2.0f;
-        float startY = panelY + 24.0f + 8.0f + (panelH - 24 - 16 - height * cellSize) / 2.0f;
+        float cell = std::min((float)(screenWidth - 16) / width, (float)(screenHeight - 32 - 16) / height);
+        float startX = 8.0f + (screenWidth - 16 - width * cell) / 2.0f;
+        float startY = 32.0f + 8.0f + (screenHeight - 32 - 16 - height * cell) / 2.0f;
 
-        visualizationBiomass.draw(
-            width, height,
-            simulation_field.get_field(),
-            startX, startY,
-            cellSize,
-            CellColorMode::Antibiotic
-        );
+        // Отрисовка – режим Nutrition (можно поменять на Antibiotic)
+        visualizer.draw(width, height, cells, startX, startY, cell, CellColorMode::Nutrition);
 
-        drawAntibioticLegend(panelX + 12, panelY + 36);
+        std::string infoText = title + " | Tick: " + std::to_string(tick);
+        if (!simulation_field.has_living_cells()) {
+            infoText += " (FINISHED)";
+        }
+        DrawText(infoText.c_str(), 10, 8, 14, DARKGRAY);
 
         EndDrawing();
     }
 
     CloseWindow();
+
+    // Закомментирован вызов kill/waitpid
+    // kill(pid1, SIGINT);
+    // kill(pid2, SIGINT);
+    // waitpid(pid1, nullptr, 0);
+    // waitpid(pid2, nullptr, 0);
+    // unlink("/dev/shm/simulation_state.dat");
+
     print_average_tick_time();
 }

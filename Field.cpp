@@ -81,13 +81,12 @@ void Field::init_environment(double initial_food) {
 }
 
 void Field::add_some_food(int count_of_adding_food) {
-    // Точечный источник в центре верхней строки
     int center = width / 2;
     get_nucleus(center, 0).get_food().add(count_of_adding_food);
 }
 
 void Field::add_antibiotic(double concentration) {
-  for (int x = 0; x < width; x++){  //добавляем только по самой верхней строчке, так и должно быть
+  for (int x = 0; x < width; x++){
     get_nucleus(x, 0).get_antibiotic().add(concentration);
   }
 }
@@ -98,7 +97,6 @@ static void diffuse_grid_adi(std::vector<double>& grid, std::vector<double>& tem
     double r = D * dt / 2.0;
     if (r <= 0.0) return;
 
-    // Предвычисление c_prime по ширине (X)
     std::vector<double> c_prime_x(width);
     c_prime_x[0] = -r / (1.0 + r);
     for (int i = 1; i < width - 1; ++i) {
@@ -106,7 +104,6 @@ static void diffuse_grid_adi(std::vector<double>& grid, std::vector<double>& tem
         c_prime_x[i] = -r / denom;
     }
 
-    // Предвычисление c_prime по высоте (Y)
     std::vector<double> c_prime_y(height);
     c_prime_y[0] = -r / (1.0 + r);
     for (int j = 1; j < height - 1; ++j) {
@@ -114,7 +111,6 @@ static void diffuse_grid_adi(std::vector<double>& grid, std::vector<double>& tem
         c_prime_y[j] = -r / denom;
     }
 
-    // 1. ПЕРВЫЙ ПОЛУШАГ: Неявный по X, явный по Y
 #pragma omp parallel
     {
         double d_prime[512];
@@ -144,7 +140,6 @@ static void diffuse_grid_adi(std::vector<double>& grid, std::vector<double>& tem
         }
     }
 
-    // 2. ВТОРОЙ ПОЛУШАГ: Явный по X, неявный по Y
 #pragma omp parallel
     {
         double d_prime[512];
@@ -174,7 +169,6 @@ static void diffuse_grid_adi(std::vector<double>& grid, std::vector<double>& tem
         }
     }
 
-    // Применение коэффициента деградации и ограничение неотрицательности
     if (decay_rate > 0.0) {
         double decay_factor = 1.0 - decay_rate;
 #pragma omp parallel for schedule(static)
@@ -331,16 +325,13 @@ void Field::process_dead_cells_disappearance() {
 }
 
 void Field::make_one_step(int number_of_step) {
-    // Диффузия
     if (number_of_step % simulation_config::visualization::number_of_step_to_diffuse == 0) {
         diffuse_all();
     }
 
-    // Добавление пищи (точечное)
     if (number_of_step % simulation_config::field::steps_for_adding_food == 0) {
         add_some_food(simulation_config::field::count_of_adding_food);
 
-        // Добавление антибиотика
         double sum_antibiotic = 0.0;
 #pragma omp parallel for reduction(+:sum_antibiotic) collapse(2) schedule(static)
         for (int y = 0; y < height; ++y) {
@@ -358,7 +349,6 @@ void Field::make_one_step(int number_of_step) {
 
     cells_for_this_step = active_cells;
 
-    // Проверка смерти
 #pragma omp parallel for schedule(static)
     for (size_t i = 0; i < cells_for_this_step.size(); ++i) {
         const auto& position = cells_for_this_step[i];
@@ -398,7 +388,6 @@ void Field::make_one_step(int number_of_step) {
         }
     }
 
-    // Фильтруем active_cells на месте (убираем те, что умерли, и перемещаем их в dead_cells)
     size_t write_idx = 0;
     for (size_t read_idx = 0; read_idx < active_cells.size(); ++read_idx) {
         const auto& pos = active_cells[read_idx];
@@ -413,10 +402,8 @@ void Field::make_one_step(int number_of_step) {
     }
     active_cells.resize(write_idx);
 
-    // Обрабатываем растворение мертвых клеток
     process_dead_cells_disappearance();
 
-    // Фильтруем dead_cells на месте (убираем те, что полностью исчезли)
     size_t write_dead_idx = 0;
     for (size_t read_idx = 0; read_idx < dead_cells.size(); ++read_idx) {
         const auto& pos = dead_cells[read_idx];

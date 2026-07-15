@@ -58,8 +58,8 @@ private:
     void process_dead_cells_disappearance();
 
     double concetration_for_next_step = simulation_config::antibiotic::concetration_for_next_step;
-    double concentration = simulation_config::antibiotic::concetration_for_next_step;  //начальная концентрация, потом добавляем ещё
-    double middle_value_of_antibiotic = simulation_config::antibiotic::middle_value_of_antibiotic;  //посмотрите в файле конфига
+    double concentration = simulation_config::antibiotic::concetration_for_next_step;
+    double middle_value_of_antibiotic = simulation_config::antibiotic::middle_value_of_antibiotic;
 public:
     Field(int width, int height);
 
@@ -77,7 +77,7 @@ public:
     void add_some_food(
         int count_of_adding_food = simulation_config::field::count_of_adding_food
     );
-    void add_antibiotic(          // новый метод
+    void add_antibiotic(
         double concentration
     );
 

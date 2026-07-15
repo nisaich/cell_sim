@@ -33,12 +33,10 @@ bool abstract_Biomass::must_he_die(Field& current_field, int x, int y) const {
 
     Cell& nucleus_ref = current_field.get_nucleus(x, y);
 
-    // Смерть от голода (если биомасса ниже порога спячки и еды в среде нет)
     if (biomass < simulation_config::monod::starvation_biomass_threshold && nucleus_ref.get_food().get_amount() <= 0.0) {
         return true;
     }
 
-    // Смерть от антибиотика
     double conc = nucleus_ref.get_antibiotic().get_concentration();
     double excess = conc - level_of_resistance;
     if (excess > 0.0) {
@@ -62,7 +60,6 @@ void abstract_Biomass::set_nucleus(Cell* current_nucleus) {
 }
 
 void abstract_Biomass::step_after_death() {
-    // Для живых клеток ничего не делаем
 }
 
 bool abstract_Biomass::should_be_removed_from_field() const {
@@ -73,7 +70,6 @@ void abstract_Biomass::consume_and_decay(Food& food) {
     double a = is_active_for_monod();
     double F = food.get_amount();
 
-    // Плата за активные эффлюксные насосы: чем выше ощить, тем медленнее клетка ест (fitness cost)
     double fitness_penalty = 1.0 - simulation_config::antibiotic::fitness_cost_coef * level_of_resistance;
 
     double u = 0.0;
@@ -118,16 +114,12 @@ void active_Biomass::consume_and_decay(Food& food) {
     double dt = simulation_config::monod::delta_t;
     double conc = nucleus->get_antibiotic().get_concentration();
 
-    // 1. Проверка по количеству оставшейся еды (на сколько шагов обслуживания её хватит)
     double maintenance_food_per_step = (simulation_config::monod::m_act * dt * biomass) / simulation_config::monod::Y_B_F;
     double steps_food_will_last = (maintenance_food_per_step > 0.0) ? (food.get_amount() / maintenance_food_per_step) : 999999.0;
     bool should_sleep_due_to_food = (steps_food_will_last < simulation_config::monod::starvation_steps_threshold);
 
-    // 2. Проверка по уровню антибиотика (близкое к порогу смерти содержание)
-    // Порог засыпания: когда концентрация превышает заданную долю от death_threshold
     bool should_sleep_due_to_antibiotic = (conc >= simulation_config::antibiotic::sleep_antibiotic_ratio * simulation_config::antibiotic::death_threshold);
 
-    // Если выполняется хотя бы одно из условий, переходим в спящее состояние
     if (should_sleep_due_to_food || should_sleep_due_to_antibiotic) {
         int ticks_needed = static_cast<int>(simulation_config::monod::steps_for_waking_up / dt);
         if (ticks_needed < 1) ticks_needed = 1;
@@ -140,20 +132,15 @@ void active_Biomass::consume_and_decay(Food& food) {
         }
     }
 
-    // Физиологическая адаптация резистентности (без деления, без случайности)
-    // Индукция (по закону Моно): есть антибиотик → поднимаем щиты
-    // Релаксация: нет антибиотика → возвращаемся к "дикому" уровню
     double r_default = simulation_config::biomass::default_resistance;
 
     if (conc > 0.0) {
-        // Режим индукции: насосы включаются пропорционально концентрации (закон Моно)
         double delta_r = simulation_config::antibiotic::k_ind
                         * (conc / (simulation_config::antibiotic::K_ind + conc))
                         * (1.0 - level_of_resistance)
                         * dt;
         level_of_resistance = std::min(1.0, level_of_resistance + delta_r);
     } else {
-        // Режим релаксации: насосы отключаются, клетка возвращается к базовому состоянию
         double delta_r = simulation_config::antibiotic::k_rec
                         * (level_of_resistance - r_default)
                         * dt;
@@ -181,7 +168,6 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
     std::uniform_real_distribution<double> chance_distribution(0.0, 1.0);
     if (chance_distribution(generator) > current_chance) return false;
 
-    // Выбираем соседа с наибольшим количеством еды (умный поиск/хемотаксис)
     double max_food = -1.0;
     for (Cell* nb : free_neighbours) {
         max_food = std::max(max_food, nb->get_food().get_amount());
@@ -199,12 +185,11 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
 
     double child_biomass = biomass * simulation_config::biomass::child_biomass_ratio;
     biomass = biomass - child_biomass;
-    age_of_cell = 0; // Сброс возраста родителя при делении (симметричное бинарное деление)
+    age_of_cell = 0;
 
     auto child = std::make_shared<active_Biomass>(level_of_resistance, max_age_of_cell);
     child->biomass = child_biomass;
 
-    // ---- ЛОГИКА ПРЫЖКА (DISPERSION) ----
     std::uniform_real_distribution<double> dispersion_dist(0.0, 1.0);
     if (dispersion_dist(generator) < simulation_config::biomass::dispersion_chance) {
         int R = simulation_config::biomass::dispersion_radius;
@@ -239,7 +224,6 @@ bool active_Biomass::reproduction(Field& current_field, int x, int y) {
             place_for_child = potential_targets[target_dist(generator)];
         }
     }
-    // ----------------------------------
 
     current_field.place_cell(place_for_child->coordinates()[0], place_for_child->coordinates()[1], child);
     return true;

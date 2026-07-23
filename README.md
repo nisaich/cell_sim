@@ -1,3 +1,0 @@
-# Biofilm Simulation
-
-писи, попы, каки...
